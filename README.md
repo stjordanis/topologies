@@ -1,2 +1,2 @@
-# topologies
-Various topologies that we made optimizations and customizations
+# Intel topology optimizations
+This is a public repository for Intel optimizations for deep learning topologies.
