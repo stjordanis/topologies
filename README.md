@@ -1,2 +1,2 @@
 # topologies
-Various topologies that we made customization, optimization for developers
+Various topologies that we made optimizations and customizations
