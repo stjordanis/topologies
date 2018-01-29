@@ -9,6 +9,7 @@ from tqdm import tqdm
 import numpy as np
 import settings_dist
 import os
+from tempfile import TemporaryFile
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 
@@ -45,6 +46,8 @@ with tf.Session(graph=tf.Graph()) as sess:
     dice = 0.0
     i = 0
 
+    msks_test_predictions = []
+
     for idx in tqdm(range(0, imgs_test.shape[0] - batch_size, batch_size), desc="Calculating metrics on test dataset", leave=False):
         x_test = imgs_test[idx:(idx+batch_size)]
         y_test = msks_test[idx:(idx+batch_size)]
@@ -53,6 +56,14 @@ with tf.Session(graph=tf.Graph()) as sess:
 
         p = np.array(sess.run([preds], feed_dict=feed_dict))
         dice += calc_dice(y_test, p)
+
+        # Add prediction to numpy array
+        msks_test_predictions.append(p)
+
         i += 1
 
-print("Average Dice for Test Set = {}".format(dice/i))
+# Save predictions
+save_dir = settings_dist.OUT_PATH
+np.save("{0}msks_test_predictions.npy".format(save_dir), msks_test_predictions)
+
+print("Average Dice for Test Set = {0}".format(dice/i))
