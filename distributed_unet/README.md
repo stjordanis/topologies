@@ -33,9 +33,7 @@ We use Intel optimized TensorFlow 1.4.0 for Python 2.7. Install instructions can
 
 ## Required Data
 
-Data files are not included in this public repo but can be provided upon request. We use the 2017 BRaTS dataset.
-
-Data is stored in the following numpy files: 
+Data files are not included in this public repo but can accessed by registering (using your institutional email address) at the following link: https://www.smir.ch/BRATS/Start2016. Once you've been given access, you may download the raw data and convert those datasets into numpy arrays having shape [num_images, x_dimension (128), y_dimension (128), num_channels]. Give the files the following names: 
 
 ```
 imgs_test.npy
@@ -99,7 +97,12 @@ Worker 3:	numactl -p 1 python test_dist.py
 
 To view training progress, as well as sets of images, predictions, and ground truth masks, direct your chrome browser to `http://your_chief_worker_address:6006/`. After a few moments, the webpage will populate and a series of training visualizations will become available. Explore the Scalars, Images, Graphs, Distributions, and Histograms tabs for detailed visualizations of training progress. You may need to create a SSH tunnel if port 6006 is not visible on your chief worker.
 
+## Citations
 
+Whenever using and/or refering to the BraTS datasets in your publications, please make sure to cite the following papers.
+
+1. https://www.ncbi.nlm.nih.gov/pubmed/25494501
+2. https://www.ncbi.nlm.nih.gov/pubmed/28872634
 
 
 
