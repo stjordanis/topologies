@@ -6,7 +6,7 @@ import numpy as np
 
 resize = 128
 train_test_split = 0.0  # 0.8  # Just for testing
-save_path = settings_dist.OUT_TEST_PATH
+save_path = settings_dist.PREPROCESS_PATH
 save_path = "/home/bduser/data_test/Brats17_TCIA_296_1/data/"
 
 def parse_segments(seg):
@@ -23,7 +23,14 @@ def parse_segments(seg):
         # Stack masks depth-wise
         msks_parsed.append(np.dstack((none,necrotic,edema,GD)))
     
+    # Replace all tumorous areas with 1 (previously marked 1, 2 or 4)
+    mask = np.asarray(msks_parsed)
+    mask[mask > 0] = 1
+    
+    print("amax",np.amax(mask))
+    
     return np.asarray(msks_parsed)
+    return mask
 
 def parse_images(img):
     print("image size: ", img.shape)
@@ -43,15 +50,18 @@ def stack_img_slices(mode_track, stack_order):
         for mode in stack_order:
             current_slice.append(mode_track[mode][slice,:,:])
         full_brain.append(np.dstack(current_slice))
+        
+    stack = np.asarray(full_brain)
+    stack = (stack - np.mean(stack))/(np.std(stack))
 
-    return np.asarray(full_brain)
+    return stack
 
 def resize_data(dataset, new_size):
     print("size at resize: ",dataset.shape)
     start_index = (dataset.shape[1] - new_size)/2
     end_index = dataset.shape[1] - start_index
 
-    return dataset[:, start_index:end_index, start_index:end_index :]
+    return np.rot90(dataset[:, start_index:end_index, start_index:end_index :], 3, axes=(1,2))
 
 def save_data(imgs_all, msks_all, split, save_path):
     
@@ -142,10 +152,3 @@ for subdir, dir, files in os.walk(root_dir):
         imgs_all = []
         msks_all = []
         print("Saved checkpoint")
-
-# image = imgs_all[im_num]
-# mask = msks_all[im_num][:,:,channel]
-# f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-# ax1.imshow(image, cmap='gray')
-# ax2.imshow(mask)
-# plt.show()
