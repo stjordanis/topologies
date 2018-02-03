@@ -42,7 +42,7 @@ msks_test.npy
 msks_train.npy
 ```
 
-Copy these files to the same folder on all the worker nodes.
+Copy these files to `/home/unet/data/slices/Results/` on all the worker nodes as well.
 
 ## Modifications to settings file
 
