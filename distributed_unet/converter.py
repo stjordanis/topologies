@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 root_dir = '/home/bduser/data_test/MICCAI_BraTS17_Data_Training'  # Replace with your BraTS data directory
-resize = 128  # Final dimension (square), set resize = 0 if no resizing is desired
+resize = 128  # Final dimension (square), set resize = 240 (original dimension) if no resizing is desired
 rotate = 3  # Number of counter-clockwise, 90 degree rotations
 save_path = settings_dist.OUT_PATH
 train_test_split = 0.85
