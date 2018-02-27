@@ -1,4 +1,4 @@
-age: ./single_brain_samples.sh
+# Usage: ./single_brain_samples.sh
 # Generates predicted masks on the test set with dim 128x128 and
 # raw brain images at full resolution.
 
