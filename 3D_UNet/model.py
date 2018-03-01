@@ -6,7 +6,8 @@ def dice_coef(y_true, y_pred, smooth = 1. ):
 	#y_true_f = tf.convert_to_tensor(y_true)
 
 	intersection = tf.reduce_sum(y_true * y_pred)
-	coef = (tf.constant(2.) * intersection + smooth) / (tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + smooth)
+	coef = (tf.constant(2.) * intersection + smooth) \
+			/ (tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + smooth)
 	return coef
 
 
