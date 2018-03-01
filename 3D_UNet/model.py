@@ -33,7 +33,7 @@ else:
 
 tf.keras.backend.set_image_data_format(data_format)
 
-def define_model(input_tensor, use_upsampling=False, n_cl_out=1, dropout=0.2, print_summary = False):
+def define_model(input_tensor, n_cl_out=1, dropout=0.2, print_summary = False):
 
 
 	# Set keras learning phase to train
