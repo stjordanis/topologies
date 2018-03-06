@@ -84,18 +84,29 @@ def define_model(input_img, use_upsampling=False, learning_rate=0.001, n_cl_out=
 	conv4 = tf.keras.layers.Dropout(dropout)(conv4) ### Trying dropout layers earlier on, as indicated in the paper
 	conv4 = tf.keras.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
 
-
-	up4 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4), conv3], axis=concat_axis)
+	if use_upsampling:
+		up4 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4), conv3], axis=concat_axis)
+	else:
+		up4 = tf.keras.layers.concatenate([tf.keras.layers.Conv3DTranspose(name="transConv4", filters=512, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv4), conv3], axis=concat_axis)
 
 	conv5 = tf.keras.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
 	conv5 = tf.keras.layers.Conv3D(name="conv5b", filters=256, **params)(conv5)
 
-	up5 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5), conv2], axis=concat_axis)
+	if use_upsampling:
+		up5 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5), conv2], axis=concat_axis)
+	else:
+		up5 = tf.keras.layers.concatenate([tf.keras.layers.Conv3DTranspose(name="transConv5", filters=256, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv5), conv2], axis=concat_axis)
 
 	conv6 = tf.keras.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
 	conv6 = tf.keras.layers.Conv3D(name="conv6b", filters=128, **params)(conv6)
 
-	up6 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6), conv1], axis=concat_axis)
+	if use_upsampling:
+		up6 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6), conv1], axis=concat_axis)
+	else:
+		up6 = tf.keras.layers.concatenate([tf.keras.layers.Conv3DTranspose(name="transConv6", filters=128, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv6), conv1], axis=concat_axis)
 
 	conv7 = tf.keras.layers.Conv3D(name="conv7a", filters=128, **params)(up6)
 	conv7 = tf.keras.layers.Conv3D(name="conv7b", filters=128, **params)(conv7)
