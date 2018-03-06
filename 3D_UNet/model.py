@@ -3,7 +3,9 @@ import numpy as np
 import tensorflow as tf
 
 def dice_coef(prediction, target, axis=(1, 2, 3), smooth=1e-5):
-
+	'''
+	Sorenson Dice
+	'''
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
 	p = tf.reduce_sum(prediction, axis=axis)
 	t = tf.reduce_sum(target, axis=axis)
@@ -12,7 +14,20 @@ def dice_coef(prediction, target, axis=(1, 2, 3), smooth=1e-5):
 	return tf.reduce_mean(dice)
 
 def dice_coef_loss(prediction, target, axis=(1,2,3), smooth=1e-5):
-	return -tf.log(dice_coef(prediction,target, axis, smooth))
+	'''
+	Sorenson Dice loss
+	Using -log(Dice) as the loss since it is better behaved.
+	Also, the log allows avoidance of the division which
+	can help prevent underflow when the numbers are very small.
+	'''
+	intersection = tf.reduce_sum(prediction * target, axis=axis)
+	p = tf.reduce_sum(prediction, axis=axis)
+	t = tf.reduce_sum(target, axis=axis)
+	numerator = tf.reduce_mean(2. * intersection + smooth)
+	denominator = tf.reduce_mean(t + p + smooth)
+	dice_loss = -tf.log(numerator) + tf.log(denominator)
+
+	return dice_loss
 
 CHANNEL_LAST = True
 if CHANNEL_LAST:
@@ -38,7 +53,7 @@ def is_power_of_2(num):
 	'''
 	return ((num & (num - 1)) == 0) and num > 0
 
-def define_model(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2, print_summary = False):
+def define_model(input_img, use_upsampling=False, learning_rate=0.001, n_cl_out=1, dropout=0.2, print_summary = False):
 
 	[b,h,w,d,c] = input_img.shape
 	if not is_power_of_2(h) or  \
@@ -69,6 +84,7 @@ def define_model(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2, print
 	conv4 = tf.keras.layers.Dropout(dropout)(conv4) ### Trying dropout layers earlier on, as indicated in the paper
 	conv4 = tf.keras.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
 
+
 	up4 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4), conv3], axis=concat_axis)
 
 	conv5 = tf.keras.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
@@ -89,22 +105,22 @@ def define_model(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2, print
 	model = tf.keras.models.Model(inputs=[inputs], outputs=[pred])
 
 	if print_summary:
-		print (model.summary())
+		model.summary()
 
-	optimizer = tf.train.AdamOptimizer(0.001)
+	optimizer = tf.train.AdamOptimizer(learning_rate)
 	model.compile(optimizer=optimizer, loss=dice_coef_loss, metrics=[dice_coef])
 
 	return model
 
 
-def sensitivity(y_true, y_pred, smooth = 1. ):
+def sensitivity(y_true, y_pred, axis=(1,2,3), smooth = 1. ):
 
-	intersection = tf.reduce_sum(y_true * y_pred)
-	coef = (intersection + smooth) / (tf.reduce_sum(y_true) + smooth)
+	intersection = tf.reduce_sum(prediction * target, axis=axis)
+	coef = (intersection + smooth) / (tf.reduce_sum(y_true, axis=axis) + smooth)
 	return tf.reduce_mean(coef)
 
-def specificity(y_true, y_pred, smooth = 1. ):
+def specificity(y_true, y_pred, axis=(1,2,3), smooth = 1. ):
 
-	intersection = tf.reduce_sum(y_true * y_pred)
-	coef = (intersection + smooth) / (tf.reduce_sum(y_pred) + smooth)
+	intersection = tf.reduce_sum(prediction * target, axis=axis)
+	coef = (intersection + smooth) / (tf.reduce_sum(y_pred, axis=axis) + smooth)
 	return tf.reduce_mean(coef)
