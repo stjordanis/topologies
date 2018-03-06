@@ -36,10 +36,10 @@ We use Intel optimized TensorFlow 1.4.0 for Python 2.7. Install instructions can
 Data files are not included in this public repo but can accessed by registering (using your institutional email address) at the following link: https://www.smir.ch/BRATS/Start2016. Once access has been granted, you may download the raw data. To convert those datasets into numpy arrays having shape [num_images, x_dimension (128), y_dimension (128), num_channels] run `python converter.py` after changing its root_dir variable to point to the location your MICCAI_BraTS... folder (processing will take a few minutes). Once complete, the following four files will be saved in the `/home/unet/data/slices/Results/` folder on the parameter server.
 
 ```
-imgs_test.npy
-imgs_train.npy
-msks_test.npy
-msks_train.npy
+-rw-r----- 1 bduser bduser  3250585696 Nov 14 11:42 imgs_test.npy
+-rw-r----- 1 bduser bduser 13002342496 Nov 14 12:08 imgs_train.npy
+-rw-r----- 1 bduser bduser   406323296 Nov 14 11:36 msks_test.npy
+-rw-r----- 1 bduser bduser  1625292896 Nov 14 11:47 msks_train.npy
 ```
 
 Copy these files to `/home/unet/data/slices/Results/` on all the worker nodes as well.
