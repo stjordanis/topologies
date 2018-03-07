@@ -22,7 +22,7 @@ parser.add_argument("--lr",
 
 parser.add_argument("--num_datapoints",
 					type = int,
-					default=1000,
+					default=31000,
 					help="Number of datapoints")
 parser.add_argument("--epochs",
 					type = int,
@@ -79,7 +79,7 @@ model = define_model(imgs, learning_rate=args.lr, print_summary=True)
 tb_callback = tf.keras.callbacks.TensorBoard(log_dir='./tb_logs',
 							histogram_freq=0,
 							batch_size=32,
-							write_graph=True, 
+							write_graph=True,
 							write_grads=False,
 							write_images=True)
 
