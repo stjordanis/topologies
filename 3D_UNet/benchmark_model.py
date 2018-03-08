@@ -1,6 +1,23 @@
+#!/usr/bin/python
+
+# ----------------------------------------------------------------------------
+# Copyright 2018 Intel
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ----------------------------------------------------------------------------
+
 import os
 import argparse
-parser = argparse.ArgumentParser(description="Benchmark U-Net",add_help=True)
+parser = argparse.ArgumentParser(description="Benchmark 3D U-Net",add_help=True)
 parser.add_argument("--dim_length",
 					type = int,
 					default=16,
@@ -40,6 +57,14 @@ parser.add_argument("--blocktime",
 					type = int,
 					default=0,
 					help="Block time for CPU threads")
+parser.add_argument("--print_model",
+					action="store_true",
+					default=False,
+					help="Print the summary of the model layers")
+parser.add_argument("--use_upsampling",
+					action="store_true",
+					default=False,
+					help="Use upsampling instead of transposed convolution")
 args = parser.parse_args()
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
@@ -48,23 +73,13 @@ os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 
 import tensorflow as tf
-from model import define_model
-from tqdm import tqdm
+from model import define_model, dice_coef_loss, dice_coef
+from model import sensitivity, specificity
+from tqdm import trange
 
 import numpy as np
 
-print("Creating random dataset")
-imgs = np.random.rand(args.num_datapoints, args.dim_length,
-            args.dim_length,
-            args.dim_length,
-            args.num_channels)
-msks = imgs + np.random.rand(args.num_datapoints, args.dim_length,
-            args.dim_length,
-            args.dim_length,
-            args.num_channels)
-print("Finished creating random dataset")
-print("Input images shape = {}".format(np.shape(imgs)))
-print("Masks shape = {}".format(np.shape(msks)))
+print("Args = {}".format(args))
 
 # Optimize CPU threads for TensorFlow
 config = tf.ConfigProto(
@@ -74,14 +89,57 @@ config = tf.ConfigProto(
 sess = tf.Session(config=config)
 tf.keras.backend.set_session(sess)
 
-model = define_model(imgs, learning_rate=args.lr, print_summary=True)
+global_step = tf.Variable(0, name="global_step", trainable=False)
 
-tb_callback = tf.keras.callbacks.TensorBoard(log_dir='./tb_logs',
-							histogram_freq=0,
-							batch_size=32,
-							write_graph=True,
-							write_grads=False,
-							write_images=True)
+# Define the shape of the input images
+# For segmentation models, the label (mask) is the same shape.
+shape = (None, args.dim_length,
+ 		            args.dim_length,
+ 		            args.dim_length,
+ 		            args.num_channels)
+img = tf.placeholder(tf.float32, shape=shape) # Input tensor
+msk = tf.placeholder(tf.float32, shape=shape) # Label tensor
 
-model.fit(imgs, msks, batch_size=args.bz, epochs=args.epochs, verbose=1,
-			callbacks=[tb_callback])
+# Define the model
+# Predict the output mask
+preds = define_model(img, learning_rate=args.lr,
+					 use_upsampling=args.use_upsampling,
+					 print_summary=args.print_model)
+
+#  Performance metrics for model
+loss = dice_coef_loss(msk, preds)  # Loss is the dice between mask and prediction
+dice_score = dice_coef(msk, preds)
+sensitivity_score = sensitivity(msk, preds)
+specificity_score = specificity(msk, preds)
+
+train_op = tf.train.AdamOptimizer(args.lr).minimize(loss, global_step=global_step)
+
+# Just feed completely random data in for the benchmark testing
+imgs = np.random.rand(args.bz, args.dim_length,
+			args.dim_length,
+			args.dim_length,
+			args.num_channels)
+msks = imgs + np.random.rand(args.bz, args.dim_length,
+			args.dim_length,
+			args.dim_length,
+			args.num_channels)
+
+# Initialize all variables
+init_op = tf.global_variables_initializer()
+sess.run(init_op)
+
+progressbar = trange(args.num_datapoints) # tqdm progress bar
+last_step = 0
+for i in range(args.num_datapoints):
+	feed_dict = {img: imgs, msk:msks}
+
+	history, loss_v, dice_v, sensitivity_v, specificity_v, this_step = \
+			sess.run([train_op, loss, dice_score,
+			sensitivity_score, specificity_score, global_step],
+			feed_dict=feed_dict)
+
+	# Print the loss and dice metric in the progress bar.
+	progressbar.set_description(
+				"(loss={:.4f}, dice={:.4f})".format(loss_v, dice_v))
+	progressbar.update(this_step-last_step)
+	last_step = this_step

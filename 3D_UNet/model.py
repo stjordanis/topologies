@@ -1,8 +1,25 @@
+#!/usr/bin/python
+
+# ----------------------------------------------------------------------------
+# Copyright 2018 Intel
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ----------------------------------------------------------------------------
+
 import os.path
 import numpy as np
 import tensorflow as tf
 
-def dice_coef(prediction, target, axis=(1, 2, 3), smooth=1e-5):
+def dice_coef(target, prediction, axis=(1, 2, 3), smooth=1e-5):
 	'''
 	Sorenson Dice
 	'''
@@ -13,7 +30,7 @@ def dice_coef(prediction, target, axis=(1, 2, 3), smooth=1e-5):
 
 	return tf.reduce_mean(dice)
 
-def dice_coef_loss(prediction, target, axis=(1,2,3), smooth=1e-5):
+def dice_coef_loss(target, prediction, axis=(1,2,3), smooth=1e-5):
 	'''
 	Sorenson Dice loss
 	Using -log(Dice) as the loss since it is better behaved.
@@ -55,13 +72,21 @@ def is_power_of_2(num):
 
 def define_model(input_img, use_upsampling=False, learning_rate=0.001, n_cl_out=1, dropout=0.2, print_summary = False):
 
-	[b,h,w,d,c] = input_img.shape
-	if not is_power_of_2(h) or  \
-		not is_power_of_2(w) or \
-		not is_power_of_2(d):
-		print("ERROR: Image dimension lengths must be a power of 2. e.g. 16x256x32")
+	# [b,h,w,d,c] = input_img.shape
+	# if not is_power_of_2(h) or  \
+	# 	not is_power_of_2(w) or \
+	# 	not is_power_of_2(d):
+	# 	print("ERROR: Image dimension lengths must be a power of 2. e.g. 16x256x32")
 
-	inputs = tf.keras.layers.Input(shape=(h,w,d,c), name="Input_Image")
+	# inputs = tf.keras.layers.Input(shape=(h,w,d,c), name="Input_Image")
+
+	# Set keras learning phase to train
+	tf.keras.backend.set_learning_phase(True)
+
+	# Don't initialize variables on the fly
+	tf.keras.backend.manual_variable_initialization(False)
+
+	inputs = tf.keras.layers.Input(tensor=input_img, name="Input_Image")
 
 	params = dict(kernel_size=(3, 3, 3), activation="relu",
 				  padding="same", data_format=data_format,
@@ -118,20 +143,20 @@ def define_model(input_img, use_upsampling=False, learning_rate=0.001, n_cl_out=
 	if print_summary:
 		model.summary()
 
-	optimizer = tf.train.AdamOptimizer(learning_rate)
-	model.compile(optimizer=optimizer, loss=dice_coef_loss, metrics=[dice_coef])
+	# optimizer = tf.train.AdamOptimizer(learning_rate)
+	# model.compile(optimizer=optimizer, loss=dice_coef_loss, metrics=[dice_coef])
 
-	return model
+	return pred #model
 
 
-def sensitivity(y_true, y_pred, axis=(1,2,3), smooth = 1. ):
+def sensitivity(target, prediction, axis=(1,2,3), smooth = 1e-5 ):
 
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	coef = (intersection + smooth) / (tf.reduce_sum(y_true, axis=axis) + smooth)
+	coef = (intersection + smooth) / (tf.reduce_sum(prediction, axis=axis) + smooth)
 	return tf.reduce_mean(coef)
 
-def specificity(y_true, y_pred, axis=(1,2,3), smooth = 1. ):
+def specificity(target, prediction, axis=(1,2,3), smooth = 1e-5 ):
 
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	coef = (intersection + smooth) / (tf.reduce_sum(y_pred, axis=axis) + smooth)
+	coef = (intersection + smooth) / (tf.reduce_sum(prediction, axis=axis) + smooth)
 	return tf.reduce_mean(coef)
