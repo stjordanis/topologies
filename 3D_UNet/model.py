@@ -18,7 +18,7 @@
 import os.path
 import numpy as np
 import tensorflow as tf
-import keras
+import keras  # Something is wrong with 3D concat layer of tf.keras (but Keras API works)
 
 def dice_coef(target, prediction, axis=(1, 2, 3), smooth=1e-5):
 	'''

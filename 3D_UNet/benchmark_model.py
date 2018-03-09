@@ -79,7 +79,7 @@ from tqdm import trange
 
 import numpy as np
 
-print("Args = {}".format(args))
+print("\nArgs = {}".format(args))
 
 # Optimize CPU threads for TensorFlow
 config = tf.ConfigProto(
@@ -128,9 +128,12 @@ msks = imgs + np.random.rand(args.bz, args.dim_length,
 init_op = tf.global_variables_initializer()
 sess.run(init_op)
 
-progressbar = trange(args.num_datapoints) # tqdm progress bar
+# Same number of sample to process regardless of batch size
+# So if we have a larger batch size we can take fewer steps.
+total_steps = args.num_datapoints//args.bz
+progressbar = trange(total_steps) # tqdm progress bar
 last_step = 0
-for i in range(args.num_datapoints):
+for i in range(total_steps):
 	feed_dict = {img: imgs, msk:msks}
 
 	history, loss_v, dice_v, sensitivity_v, specificity_v, this_step = \
