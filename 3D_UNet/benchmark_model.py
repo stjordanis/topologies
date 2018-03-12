@@ -16,6 +16,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import multiprocessing
 import argparse
 parser = argparse.ArgumentParser(description="Benchmark 3D U-Net",add_help=True)
 parser.add_argument("--dim_length",
@@ -29,7 +30,7 @@ parser.add_argument("--num_channels",
 
 parser.add_argument("--bz",
 					type = int,
-					default=10,
+					default=1,
 					help="Batch size")
 
 parser.add_argument("--lr",
@@ -39,7 +40,7 @@ parser.add_argument("--lr",
 
 parser.add_argument("--num_datapoints",
 					type = int,
-					default=31000,
+					default=1024,
 					help="Number of datapoints")
 parser.add_argument("--epochs",
 					type = int,
@@ -47,7 +48,7 @@ parser.add_argument("--epochs",
 					help="Number of epochs")
 parser.add_argument("--intraop_threads",
 					type = int,
-					default=60,
+					default=multiprocessing.cpu_count()-1, # All but one core
 					help="Number of intraop threads")
 parser.add_argument("--interop_threads",
 					type = int,
@@ -75,9 +76,8 @@ os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 import tensorflow as tf
 from model import define_model, dice_coef_loss, dice_coef
 from model import sensitivity, specificity
-from tqdm import trange
-
-import numpy as np
+from tqdm import trange, tqdm
+tqdm.monitor_interval = 0
 
 print("\nArgs = {}".format(args))
 
@@ -94,9 +94,9 @@ global_step = tf.Variable(0, name="global_step", trainable=False)
 # Define the shape of the input images
 # For segmentation models, the label (mask) is the same shape.
 shape = (None, args.dim_length,
- 		            args.dim_length,
- 		            args.dim_length,
- 		            args.num_channels)
+					args.dim_length,
+					args.dim_length,
+					args.num_channels)
 img = tf.placeholder(tf.float32, shape=shape) # Input tensor
 msk = tf.placeholder(tf.float32, shape=shape) # Label tensor
 
@@ -128,21 +128,45 @@ msks = imgs + np.random.rand(args.bz, args.dim_length,
 init_op = tf.global_variables_initializer()
 sess.run(init_op)
 
-# Same number of sample to process regardless of batch size
-# So if we have a larger batch size we can take fewer steps.
-total_steps = args.num_datapoints//args.bz
-progressbar = trange(total_steps) # tqdm progress bar
-last_step = 0
-for i in range(total_steps):
-	feed_dict = {img: imgs, msk:msks}
+# Set up trace for operations
+run_metadata = tf.RunMetadata()
+run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
 
-	history, loss_v, dice_v, sensitivity_v, specificity_v, this_step = \
-			sess.run([train_op, loss, dice_score,
-			sensitivity_score, specificity_score, global_step],
-			feed_dict=feed_dict)
+for epoch in range(args.epochs):
 
-	# Print the loss and dice metric in the progress bar.
-	progressbar.set_description(
-				"(loss={:.4f}, dice={:.4f})".format(loss_v, dice_v))
-	progressbar.update(this_step-last_step)
-	last_step = this_step
+	# Same number of sample to process regardless of batch size
+	# So if we have a larger batch size we can take fewer steps.
+	total_steps = args.num_datapoints//args.bz
+	progressbar = trange(total_steps) # tqdm progress bar
+	last_step = 0
+	for i in range(total_steps):
+		feed_dict = {img: imgs, msk:msks}
+
+		history, loss_v, dice_v, sensitivity_v, specificity_v, this_step = \
+				sess.run([train_op, loss, dice_score,
+				sensitivity_score, specificity_score, global_step],
+				feed_dict=feed_dict,
+				options=run_options, run_metadata=run_metadata)
+
+		# Print the loss and dice metric in the progress bar.
+		progressbar.set_description(
+					"Epoch {}/{}: (loss={:.4f}, dice={:.4f})".format(
+					epoch+1, args.epochs, loss_v, dice_v))
+		progressbar.update(this_step-last_step)
+		last_step = this_step
+
+'''
+Save the training timeline
+'''
+from tensorflow.python.client import timeline
+
+timeline_filename = "./3dunet_timeline_trace.json"
+fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+chrome_trace = fetched_timeline.generate_chrome_trace_format()
+with open(timeline_filename, "w") as f:
+	print("Saved Tensorflow trace to: {}".format(timeline_filename))
+	print("To view the trace:\n(1) Open Chrome browser.\n"
+	"(2) Go to this url -- chrome://tracing\n"
+	"(3) Click the load button.\n"
+	"(4) Load the file {}.".format(timeline_filename))
+	f.write(chrome_trace)
