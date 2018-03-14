@@ -15,6 +15,7 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
+import numpy as np
 import os
 import multiprocessing
 import argparse
