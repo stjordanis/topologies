@@ -9,6 +9,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("root_dir")
 parser.add_argument("sample")
+parser.add_argument("train_test_split")
 parser.add_argument("resize")
 parser.add_argument("save_path")
 args = parser.parse_args()
@@ -18,7 +19,7 @@ sample = args.sample
 resize = int(args.resize)  # Final dimension (square), set resize = 0 if no resizing is desired
 rotate = 3  # Number of counter-clockwise, 90 degree rotations
 save_path = args.save_path
-train_test_split = 0.0
+train_test_split = float(args.train_test_split)
 save_interval = 10
 
 def parse_segments(seg):
