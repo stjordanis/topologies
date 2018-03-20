@@ -224,9 +224,9 @@ def unet2D(input_tensor, use_upsampling=False,
 
 def conv3D(input_img, print_summary = False, dropout=0.2):
 	"""
-	Simple 3D convolution model
+	Simple 3D convolution model based on VGG-16
 	"""
-	print("3D Convolutional Binary Classifier")
+	print("3D Convolutional Binary Classifier based on VGG-16")
 
 	# Set keras learning phase to train
 	keras.backend.set_learning_phase(True)
@@ -240,33 +240,45 @@ def conv3D(input_img, print_summary = False, dropout=0.2):
 				  padding="same", data_format=data_format,
 				  kernel_initializer="he_uniform")
 
-	conv1 = keras.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
-	conv1 = keras.layers.Conv3D(name="conv1b", filters=64, **params)(conv1)
-	pool1 = keras.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv1)
+	# Set keras learning phase to train
+	keras.backend.set_learning_phase(True)
 
-	conv2 = keras.layers.Conv3D(name="conv2a", filters=64, **params)(pool1)
-	conv2 = keras.layers.Conv3D(name="conv2b", filters=128, **params)(conv2)
-	pool2 = keras.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv2)
+	# Don"t initialize variables on the fly
+	keras.backend.manual_variable_initialization(False)
 
-	conv3 = keras.layers.Conv3D(name="conv3a", filters=128, **params)(pool2)
-	conv3 = keras.layers.Dropout(dropout)(conv3) ### Trying dropout layers earlier on, as indicated in the paper
-	conv3 = keras.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
-	pool3 = keras.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv3)
+	inputs = keras.layers.Input(tensor=input_tensor, name="Images")
 
-	conv4 = keras.layers.Conv3D(name="conv4a", filters=256, **params)(pool3)
-	conv4 = keras.layers.Dropout(dropout)(conv4) ### Trying dropout layers earlier on, as indicated in the paper
-	conv4 = keras.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
+	params = dict(kernel_size=(3, 3, 3), activation="relu",
+				  padding="same", data_format=data_format,
+				  kernel_initializer="he_uniform") #RandomUniform(minval=-0.01, maxval=0.01, seed=816))
 
-	conv5 = keras.layers.Conv3D(name="conv5", filters=512, **params)(conv4)
-	convOut = keras.layers.Conv3D(name="conv6", filters=512, **params)(conv5)
+	conv1 = keras.layers.Conv3D(name="conv1", filters=64, **params)(inputs)
+	conv2 = keras.layers.Conv3D(name="conv2", filters=64, **params)(conv1)
+	pool1 = keras.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv2)
 
-	for _ in range(8):
-		convOut = keras.layers.Conv3D(filters=512, **params)(convOut)
+	conv3 = keras.layers.Conv3D(name="conv3", filters=128, **params)(pool1)
+	conv4 = keras.layers.Conv3D(name="conv4", filters=128, **params)(conv3)
+	pool2 = keras.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv4)
 
+	conv5 = keras.layers.Conv3D(name="conv5", filters=256, **params)(pool2)
+	conv6 = keras.layers.Conv3D(name="conv6", filters=256, **params)(conv5)
+	conv7 = keras.layers.Conv3D(name="conv7", filters=256, **params)(conv6)
+	pool3 = keras.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv7)
 
-	flat = keras.layers.Flatten()(convOut)
+	conv8 = keras.layers.Conv3D(name="conv8", filters=512, **params)(pool3)
+	conv9 = keras.layers.Conv3D(name="conv9", filters=512, **params)(conv8)
+	conv10 = keras.layers.Conv3D(name="conv10", filters=512, **params)(conv9)
+	pool4 = keras.layers.MaxPooling3D(name="pool4", pool_size=(2, 2, 2))(conv10)
+
+	conv11 = keras.layers.Conv3D(name="conv11", filters=512, **params)(pool4)
+	conv12 = keras.layers.Conv3D(name="conv12", filters=512, **params)(conv11)
+	conv13 = keras.layers.Conv3D(name="conv13", filters=512, **params)(conv12)
+	pool5 = keras.layers.MaxPooling3D(name="pool5", pool_size=(2, 2, 2))(conv13)
+
+	flat = keras.layers.Flatten()(pool5)
 	dense1 = keras.layers.Dense(4096, activation="relu")(flat)
-	dense2 = keras.layers.Dense(4096, activation="relu")(dense1)
+	drop1 = keras.layers.Dropout(dropout)(dense1)
+	dense2 = keras.layers.Dense(4096, activation="relu")(drop1)
 	pred = keras.layers.Dense(1, name="Prediction", activation="sigmoid")(dense2)
 
 	if print_summary:
@@ -279,9 +291,10 @@ def conv3D(input_img, print_summary = False, dropout=0.2):
 def conv2D(input_tensor, print_summary = False, dropout=0.2):
 
 	"""
-	Simple 2D convolution model
+	Simple 2D convolution model based on VGG-16
 	"""
-	print("2D Convolutional Binary Classifier")
+	print("2D Convolutional Binary Classifier based on VGG-16")
+
 	# Set keras learning phase to train
 	keras.backend.set_learning_phase(True)
 
@@ -294,34 +307,33 @@ def conv2D(input_tensor, print_summary = False, dropout=0.2):
 				  padding="same", data_format=data_format,
 				  kernel_initializer="he_uniform") #RandomUniform(minval=-0.01, maxval=0.01, seed=816))
 
-	conv1 = keras.layers.Conv2D(name="conv1a", filters=32, **params)(inputs)
-	conv1 = keras.layers.Conv2D(name="conv1b", filters=32, **params)(conv1)
-	pool1 = keras.layers.MaxPooling2D(name="pool1", pool_size=(2, 2))(conv1)
+	conv1 = keras.layers.Conv2D(name="conv1", filters=64, **params)(inputs)
+	conv2 = keras.layers.Conv2D(name="conv2", filters=64, **params)(conv1)
+	pool1 = keras.layers.MaxPooling2D(name="pool1", pool_size=(2, 2))(conv2)
 
-	conv2 = keras.layers.Conv2D(name="conv2a", filters=64, **params)(pool1)
-	conv2 = keras.layers.Conv2D(name="conv2b", filters=64, **params)(conv2)
-	pool2 = keras.layers.MaxPooling2D(name="pool2", pool_size=(2, 2))(conv2)
+	conv3 = keras.layers.Conv2D(name="conv3", filters=128, **params)(pool1)
+	conv4 = keras.layers.Conv2D(name="conv4", filters=128, **params)(conv3)
+	pool2 = keras.layers.MaxPooling2D(name="pool2", pool_size=(2, 2))(conv4)
 
-	conv3 = keras.layers.Conv2D(name="conv3a", filters=128, **params)(pool2)
-	conv3 = keras.layers.Dropout(dropout)(conv3) ### Trying dropout layers earlier on, as indicated in the paper
-	conv3 = keras.layers.Conv2D(name="conv3b", filters=128, **params)(conv3)
+	conv5 = keras.layers.Conv2D(name="conv5", filters=256, **params)(pool2)
+	conv6 = keras.layers.Conv2D(name="conv6", filters=256, **params)(conv5)
+	conv7 = keras.layers.Conv2D(name="conv7", filters=256, **params)(conv6)
+	pool3 = keras.layers.MaxPooling2D(name="pool3", pool_size=(2, 2))(conv7)
 
-	pool3 = keras.layers.MaxPooling2D(name="pool3", pool_size=(2, 2))(conv3)
+	conv8 = keras.layers.Conv2D(name="conv8", filters=512, **params)(pool3)
+	conv9 = keras.layers.Conv2D(name="conv9", filters=512, **params)(conv8)
+	conv10 = keras.layers.Conv2D(name="conv10", filters=512, **params)(conv9)
+	pool4 = keras.layers.MaxPooling2D(name="pool4", pool_size=(2, 2))(conv10)
 
-	conv4 = keras.layers.Conv2D(name="conv4a", filters=256, **params)(pool3)
-	conv4 = keras.layers.Dropout(dropout)(conv4) ### Trying dropout layers earlier on, as indicated in the paper
-	conv4 = keras.layers.Conv2D(name="conv4b", filters=256, **params)(conv4)
+	conv11 = keras.layers.Conv2D(name="conv11", filters=512, **params)(pool4)
+	conv12 = keras.layers.Conv2D(name="conv12", filters=512, **params)(conv11)
+	conv13 = keras.layers.Conv2D(name="conv13", filters=512, **params)(conv12)
+	pool5 = keras.layers.MaxPooling2D(name="pool5", pool_size=(2, 2))(conv13)
 
-	pool4 = keras.layers.MaxPooling2D(name="pool4", pool_size=(2, 2))(conv4)
-
-	convOut = keras.layers.Conv2D(name="conv5a", filters=512, **params)(pool4)
-
-	for _ in range(8):
-		convOut = keras.layers.Conv2D(filters=512, **params)(convOut)
-
-	flat = keras.layers.Flatten()(convOut)
+	flat = keras.layers.Flatten()(pool5)
 	dense1 = keras.layers.Dense(4096, activation="relu")(flat)
-	dense2 = keras.layers.Dense(4096, activation="relu")(dense1)
+	drop1 = keras.layers.Dropout(dropout)(dense1)
+	dense2 = keras.layers.Dense(4096, activation="relu")(drop1)
 	pred = keras.layers.Dense(1, name="Prediction", activation="sigmoid")(dense2)
 
 	if print_summary:
