@@ -29,6 +29,10 @@ parser.add_argument("--num_channels",
 					type = int,
 					default=1,
 					help="Number of channels")
+parser.add_argument("--num_outputs",
+					type = int,
+					default=1,
+					help="Number of outputs")
 
 parser.add_argument("--bz",
 					type = int,
@@ -76,11 +80,16 @@ parser.add_argument("--single_class_output",
 					action="store_true",
 					default=False,
 					help="Use binary classifier instead of U-Net")
+parser.add_argument("--mkl_verbose",
+					action="store_true",
+					default=False,
+					help="Print MKL debug statements.")
 
 args = parser.parse_args()
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
-os.environ["MKL_VERBOSE"] = "1"  # Print out messages from MKL operations
+if args.mkl_verbose:
+	os.environ["MKL_VERBOSE"] = "1"  # Print out messages from MKL operations
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
@@ -98,6 +107,10 @@ if args.D2:  # Define shape of the tensors (2D)
 					args.dim_length,
 					args.dim_length,
 					args.num_channels]
+	out_shape = [args.bz,
+					args.dim_length,
+					args.dim_length,
+					args.num_outputs]
 else:        # Define shape of the tensors (3D)
 	dims=(1,2,3)
 	tensor_shape = [args.bz,
@@ -105,6 +118,11 @@ else:        # Define shape of the tensors (3D)
 					args.dim_length,
 					args.dim_length,
 					args.num_channels]
+	tensor_shape = [args.bz,
+					args.dim_length,
+					args.dim_length,
+					args.dim_length,
+					args.num_outputs]
 
 # Optimize CPU threads for TensorFlow
 config = tf.ConfigProto(
@@ -121,9 +139,9 @@ global_step = tf.Variable(0, name="global_step", trainable=False)
 img = tf.placeholder(tf.float32, shape=tensor_shape) # Input tensor
 
 if args.single_class_output:
-	truth = tf.placeholder(tf.float32, shape=(args.bz,1)) # Label tensor
+	truth = tf.placeholder(tf.float32, shape=(args.bz,args.num_outputs)) # Label tensor
 else:
-	truth = tf.placeholder(tf.float32, shape=tensor_shape) # Label tensor
+	truth = tf.placeholder(tf.float32, shape=out_shape) # Label tensor
 
 # Define the model
 # Predict the output mask
@@ -131,25 +149,25 @@ else:
 if args.single_class_output:
 	if args.D2:    # 2D convnet model
 		predictions = conv2D(img,
-					   print_summary=args.print_model)
+					   print_summary=args.print_model, n_out=args.num_outputs)
 	else:			# 3D convet model
 		predictions = conv3D(img,
-					   print_summary=args.print_model)
+					   print_summary=args.print_model, n_out=args.num_outputs)
 else:
 
 	if args.D2:    # 2D U-Net model
 		predictions = unet2D(img,
 					   use_upsampling=args.use_upsampling,
-					   print_summary=args.print_model)
+					   print_summary=args.print_model, n_out=args.num_outputs)
 	else:			# 3D U-Net model
 		predictions = unet3D(img,
 					   use_upsampling=args.use_upsampling,
-					   print_summary=args.print_model)
+					   print_summary=args.print_model, n_out=args.num_outputs)
 
 #  Performance metrics for model
 if args.single_class_output:
 	loss = tf.losses.sigmoid_cross_entropy(truth, predictions)
-	metric_score = tf.keras.metrics.binary_accuracy(truth, predictions)
+	metric_score = tf.metrics.mean_squared_error(truth, predictions)
 else:
 	loss = dice_coef_loss(truth, predictions, dims)  # Loss is the dice between mask and prediction
 	metric_score = dice_coef(truth, predictions, dims)
@@ -160,13 +178,15 @@ train_op = tf.train.AdamOptimizer(args.lr).minimize(loss, global_step=global_ste
 imgs = np.random.rand(*tensor_shape)
 
 if args.single_class_output:
-	truths = np.random.rand(args.bz, 1)
+	truths = np.random.rand(args.bz, args.num_outputs)
 else:
-	truths = imgs + np.random.rand(*tensor_shape)
+	truths = np.random.rand(*out_shape)
 
 # Initialize all variables
 init_op = tf.global_variables_initializer()
+init_l = tf.local_variables_initializer() # For TensorFlow metrics
 sess.run(init_op)
+sess.run(init_l)
 
 # Set up trace for operations
 run_metadata = tf.RunMetadata()
@@ -188,9 +208,14 @@ for epoch in range(args.epochs):
 				options=run_options, run_metadata=run_metadata)
 
 		# Print the loss and dice metric in the progress bar.
-		progressbar.set_description(
-					"Epoch {}/{}: (loss={}, metric={})".format(
-					epoch+1, args.epochs, loss_v, metric_v))
+		if args.single_class_output:
+			progressbar.set_description(
+						"Epoch {}/{}: (loss={:.4f}, MSE={:.4f})".format(
+						epoch+1, args.epochs, loss_v, metric_v[1]))
+		else:
+			progressbar.set_description(
+						"Epoch {}/{}: (loss={:.4f}, dice={:.4f})".format(
+						epoch+1, args.epochs, loss_v, metric_v))
 		progressbar.update(this_step-last_step)
 		last_step = this_step
 

@@ -56,7 +56,7 @@ else:
 	concat_axis = 1
 	data_format = "channels_first"
 
-def unet3D(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2,
+def unet3D(input_img, use_upsampling=False, n_out=1, dropout=0.2,
 			print_summary = False):
 	"""
 	3D U-Net model
@@ -118,7 +118,7 @@ def unet3D(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2,
 
 	conv7 = keras.layers.Conv3D(name="conv7a", filters=128, **params)(up6)
 	conv7 = keras.layers.Conv3D(name="conv7b", filters=128, **params)(conv7)
-	pred = keras.layers.Conv3D(name="PredictionMask", filters=n_cl_out, kernel_size=(1, 1, 1),
+	pred = keras.layers.Conv3D(name="PredictionMask", filters=n_out, kernel_size=(1, 1, 1),
 					data_format=data_format, activation="sigmoid")(conv7)
 
 	if print_summary:
@@ -128,7 +128,7 @@ def unet3D(input_img, use_upsampling=False, n_cl_out=1, dropout=0.2,
 	return pred
 
 def unet2D(input_tensor, use_upsampling=False,
-			n_cl_out=1, dropout=0.2, print_summary = False):
+			n_out=1, dropout=0.2, print_summary = False):
 	"""
 	2D U-Net
 	"""
@@ -213,7 +213,7 @@ def unet2D(input_tensor, use_upsampling=False,
 	conv9 = keras.layers.Conv2D(name="conv9a", filters=32, **params)(up9)
 	conv9 = keras.layers.Conv2D(name="conv9b", filters=32, **params)(conv9)
 
-	pred = keras.layers.Conv2D(name="PredictionMask", filters=n_cl_out, kernel_size=(1, 1),
+	pred = keras.layers.Conv2D(name="PredictionMask", filters=n_out, kernel_size=(1, 1),
 					data_format=data_format, activation="sigmoid")(conv9)
 
 	if print_summary:
@@ -222,31 +222,18 @@ def unet2D(input_tensor, use_upsampling=False,
 
 	return pred
 
-def conv3D(input_img, print_summary = False, dropout=0.2):
+def conv3D(input_img, print_summary = False, dropout=0.2, n_out=1):
 	"""
 	Simple 3D convolution model based on VGG-16
 	"""
 	print("3D Convolutional Binary Classifier based on VGG-16")
-
 	# Set keras learning phase to train
 	keras.backend.set_learning_phase(True)
 
 	# Don"t initialize variables on the fly
 	keras.backend.manual_variable_initialization(False)
 
-	inputs = keras.layers.Input(tensor=input_img, name="Input_Image")
-
-	params = dict(kernel_size=(3, 3, 3), activation="relu",
-				  padding="same", data_format=data_format,
-				  kernel_initializer="he_uniform")
-
-	# Set keras learning phase to train
-	keras.backend.set_learning_phase(True)
-
-	# Don"t initialize variables on the fly
-	keras.backend.manual_variable_initialization(False)
-
-	inputs = keras.layers.Input(tensor=input_tensor, name="Images")
+	inputs = keras.layers.Input(tensor=input_img, name="Images")
 
 	params = dict(kernel_size=(3, 3, 3), activation="relu",
 				  padding="same", data_format=data_format,
@@ -279,7 +266,7 @@ def conv3D(input_img, print_summary = False, dropout=0.2):
 	dense1 = keras.layers.Dense(4096, activation="relu")(flat)
 	drop1 = keras.layers.Dropout(dropout)(dense1)
 	dense2 = keras.layers.Dense(4096, activation="relu")(drop1)
-	pred = keras.layers.Dense(1, name="Prediction", activation="sigmoid")(dense2)
+	pred = keras.layers.Dense(n_out, name="Prediction", activation="sigmoid")(dense2)
 
 	if print_summary:
 		model = keras.models.Model(inputs=[inputs], outputs=[pred])
@@ -288,7 +275,7 @@ def conv3D(input_img, print_summary = False, dropout=0.2):
 	return pred
 
 
-def conv2D(input_tensor, print_summary = False, dropout=0.2):
+def conv2D(input_tensor, print_summary = False, dropout=0.2, n_out=1):
 
 	"""
 	Simple 2D convolution model based on VGG-16
@@ -334,7 +321,7 @@ def conv2D(input_tensor, print_summary = False, dropout=0.2):
 	dense1 = keras.layers.Dense(4096, activation="relu")(flat)
 	drop1 = keras.layers.Dropout(dropout)(dense1)
 	dense2 = keras.layers.Dense(4096, activation="relu")(drop1)
-	pred = keras.layers.Dense(1, name="Prediction", activation="sigmoid")(dense2)
+	pred = keras.layers.Dense(n_out, name="Prediction", activation="sigmoid")(dense2)
 
 	if print_summary:
 		model = keras.models.Model(inputs=[inputs], outputs=[pred])
