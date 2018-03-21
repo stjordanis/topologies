@@ -99,21 +99,21 @@ To view training progress, as well as sets of images, predictions, and ground tr
 
 ## Inference
 
-To perform inference in TensorFlow with a model trained in a distributed setting, the model must be saved to a common location during training. We recommend setting up a shared NFS drive on all nodes in the cluster. 
+To perform inference in TensorFlow with a model trained in a distributed setting, the model must be saved to a common location during training. We recommend saving to an NFS drive visible to all nodes in the cluster. 
 
-Once a model is saved, to perform inference on the test set, `imgs_test.npy` and `msks_test.npy`, update the `CHECKPOINT_DIRECTORY` variable in `settings_dist.py`. As the `OUT_PATH` variable should already be set in `settings_dist.py`, execute the following command to perform inference using the trained model:
+To perform inference on the test set (`imgs_test.npy` and `msks_test.npy`) update the `CHECKPOINT_DIRECTORY` variable in `settings_dist.py` to reflect the location of the saved `.pb` model. Execute the following command to perform inference using the trained model:
 
 ```
 python inference.py
 ```
 
-Once complete, the final dice coefficient will be printed to stdout and the predicted masks will be saved in the directory specified by `OUT_PATH` under the name `msks_test_predictions.npy`. These prediction masks are the same dimensions as the input data and serve as helpful sanity check when evaluating the quality of a trained model.
+When `inference.py` completes, the final dice coefficient will be printed to stdout and the predicted masks will be saved in the directory, specified by `OUT_PATH` in `settings_dist.py`, under the name `msks_test_predictions.npy`. These prediction masks are the same dimensions as the input data and serve as helpful sanity checks when evaluating the quality of a trained model.
 
 If performing inference on smaller subsets of the test data, or smaller test sets in general, the `batch_size` variable can be adjusted within `inference.py`. 
 
 ## Sample Generation/Validation
 
-If individual brain scans (155 slices, train/test images and train/test masks) are desired, use the `single_brain_samples.sh` bash script. Before running, modify the `data_dir`, `section`, and `sample_dir` and `train_test_split` variables. To pick out individual samples, simply list them by name in the for loop, then run:
+If individual brain scans (each with 155 slices) are desired, use the `single_brain_samples.sh` bash script. Before running, modify the `data_dir`, `section`, `sample_dir` and `train_test_split` variables. To pick out individual samples, simply list them by name in the for loop, then run:
 
 ```
 bash single_brain_samples.sh
