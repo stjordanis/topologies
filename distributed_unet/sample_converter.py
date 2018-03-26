@@ -168,7 +168,7 @@ for subdir, dir, files in tqdm(os.walk(root_dir)):
 		scan_count += 1
 		imgs_all.extend(np.asarray(stack_img_slices(mode_track,img_modes)))
 
-	if (scan_count%save_interval == 0) & (scan_count != 0):
+	if (scan_count%save_interval == 0) & (scan_count != 0) & (len(imgs_all) > 0) & (len(msks_all) > 0):
 		print("Total scans processed: {}".format(scan_count))
 		save_data(imgs_all, msks_all, train_test_split, save_path)
 		imgs_all = []
