@@ -12,6 +12,13 @@ save_path = settings_dist.OUT_PATH
 train_test_split = 0.85
 save_interval = 25
 
+# Check for existing numpy train/test files
+check_dir = os.listdir(save_path)
+for item in check_dir:
+	if item.endswith(".npy"):
+		os.remove(os.path.join(save_path, item))
+		print("Removed old version of {}".format(item))
+
 def parse_segments(seg):
 	
 	# Each channel corresponds to a different region of the tumor, decouple and stack these
