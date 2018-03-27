@@ -21,7 +21,7 @@ for sample in 'Brats17_TCIA_296_1' 'Brats17_TCIA_607_1'; do
 
         time python sample_converter.py $data_dir $sample $train_test_split $fin_msk_size $sample_dir$sample/data/
 
-        time python sample_sanity_check.py $sample_dir$sample/data/
+        time python sample_inference.py $sample_dir$sample/data/
 
         rm $sample_dir$sample/data/*test.npy
 
