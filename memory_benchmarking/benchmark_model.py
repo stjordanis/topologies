@@ -141,7 +141,7 @@ img = tf.placeholder(tf.float32, shape=tensor_shape) # Input tensor
 if args.single_class_output:
 	truth = tf.placeholder(tf.float32, shape=(args.bz,args.num_outputs)) # Label tensor
 else:
-	truth = tf.placeholder(tf.float32, shape=out_shape) # Label tensor
+	truth = tf.placeholder(tf.float32, shape=tensor_shape) # Label tensor
 
 # Define the model
 # Predict the output mask
@@ -180,7 +180,7 @@ imgs = np.random.rand(*tensor_shape)
 if args.single_class_output:
 	truths = np.random.rand(args.bz, args.num_outputs)
 else:
-	truths = np.random.rand(*out_shape)
+	truths = np.random.rand(*tensor_shape)
 
 # Initialize all variables
 init_op = tf.global_variables_initializer()
