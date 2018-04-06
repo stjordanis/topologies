@@ -17,7 +17,7 @@
 
 import numpy as np
 import os
-import multiprocessing
+import psutil
 import argparse
 parser = argparse.ArgumentParser(
 	description="Benchmark 3D and 2D Convolution Models",add_help=True)
@@ -54,7 +54,7 @@ parser.add_argument("--epochs",
 					help="Number of epochs")
 parser.add_argument("--intraop_threads",
 					type = int,
-					default=multiprocessing.cpu_count()-1, # All but one core
+					default=psutil.cpu_count-2, # All but 2 cores
 					help="Number of intraop threads")
 parser.add_argument("--interop_threads",
 					type = int,
@@ -84,10 +84,6 @@ parser.add_argument("--mkl_verbose",
 					action="store_true",
 					default=False,
 					help="Print MKL debug statements.")
-parser.add_argument("--keras_api",
-					action="store_true",
-					default=False,
-					help="Use Keras API.")
 
 args = parser.parse_args()
 
