@@ -84,6 +84,10 @@ parser.add_argument("--mkl_verbose",
 					action="store_true",
 					default=False,
 					help="Print MKL debug statements.")
+parser.add_argument("--keras_api",
+					action="store_true",
+					default=False,
+					help="Use Keras API.")
 
 args = parser.parse_args()
 
@@ -93,6 +97,7 @@ if args.mkl_verbose:
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
+
 
 import tensorflow as tf
 from model import *
@@ -130,7 +135,7 @@ config = tf.ConfigProto(
 		intra_op_parallelism_threads=args.intraop_threads)
 
 sess = tf.Session(config=config)
-tf.keras.backend.set_session(sess)
+keras.backend.set_session(sess)
 
 global_step = tf.Variable(0, name="global_step", trainable=False)
 
