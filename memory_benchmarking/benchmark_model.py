@@ -54,7 +54,7 @@ parser.add_argument("--epochs",
 					help="Number of epochs")
 parser.add_argument("--intraop_threads",
 					type = int,
-					default=psutil.cpu_count()-2, # All but 2 cores
+					default=psutil.cpu_count(logical=False)-2, # All but 2 cores
 					help="Number of intraop threads")
 parser.add_argument("--interop_threads",
 					type = int,
