@@ -17,8 +17,10 @@
 
 import numpy as np
 import os
-import multiprocessing
 import argparse
+import psutil
+import time
+
 parser = argparse.ArgumentParser(
 	description="Benchmark 3D and 2D Convolution Models",add_help=True)
 parser.add_argument("--dim_length",
@@ -54,7 +56,7 @@ parser.add_argument("--epochs",
 					help="Number of epochs")
 parser.add_argument("--intraop_threads",
 					type = int,
-					default=multiprocessing.cpu_count()-1, # All but one core
+					default=psutil.cpu_count(logical=False), # All physical cores
 					help="Number of intraop threads")
 parser.add_argument("--interop_threads",
 					type = int,
@@ -84,16 +86,21 @@ parser.add_argument("--mkl_verbose",
 					action="store_true",
 					default=False,
 					help="Print MKL debug statements.")
-parser.add_argument("--keras_api",
+parser.add_argument("--trace",
 					action="store_true",
 					default=False,
-					help="Use Keras API.")
+					help="Create trace of TensorFlow timeline")
+parser.add_argument("--inference",
+					action="store_true",
+					default=False,
+					help="Test inference speed. Default=Test training speed")
 
 args = parser.parse_args()
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 if args.mkl_verbose:
 	os.environ["MKL_VERBOSE"] = "1"  # Print out messages from MKL operations
+	os.environ["MKLDNN_VERBOSE"] = "1"  # Print out messages from MKL-DNN operations
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
@@ -101,10 +108,19 @@ os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 
 import tensorflow as tf
 from model import *
-from tqdm import trange, tqdm
-tqdm.monitor_interval = 0
+from tqdm import tqdm
 
-print("\nArgs = {}".format(args))
+import datetime
+
+print("Started script on {}".format(datetime.datetime.now()))
+
+print("args = {}".format(args))
+print("OS: {}".format(os.system("uname -a")))
+print("TensorFlow version: {}".format(tf.__version__))
+
+import keras as K
+
+print("Keras API version: {}".format(K.__version__))
 
 if args.D2:  # Define shape of the tensors (2D)
 	dims = (1,2)
@@ -135,7 +151,8 @@ config = tf.ConfigProto(
 		intra_op_parallelism_threads=args.intraop_threads)
 
 sess = tf.Session(config=config)
-keras.backend.set_session(sess)
+K.backend.set_session(sess)
+
 
 global_step = tf.Variable(0, name="global_step", trainable=False)
 
@@ -150,6 +167,12 @@ else:
 
 # Define the model
 # Predict the output mask
+
+if not args.inference:
+	# Set keras learning phase to train
+	K.backend.set_learning_phase(True)
+	# Don"t initialize variables on the fly
+	K.backend.manual_variable_initialization(False)
 
 if args.single_class_output:
 	if args.D2:    # 2D convnet model
@@ -193,49 +216,74 @@ init_l = tf.local_variables_initializer() # For TensorFlow metrics
 sess.run(init_op)
 sess.run(init_l)
 
+# Freeze graph if inference
+if args.inference:
+	K.backend.set_learning_phase(False)
+
 # Set up trace for operations
 run_metadata = tf.RunMetadata()
 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
 
-for epoch in range(args.epochs):
+# Same number of sample to process regardless of batch size
+# So if we have a larger batch size we can take fewer steps.
+total_steps = args.num_datapoints//args.bz
 
-	# Same number of sample to process regardless of batch size
-	# So if we have a larger batch size we can take fewer steps.
-	total_steps = args.num_datapoints//args.bz
-	progressbar = trange(total_steps) # tqdm progress bar
-	last_step = 0
-	for i in range(total_steps):
-		feed_dict = {img: imgs, truth:truths}
+print("Using random data.")
+if args.inference:
+	print("Testing inference speed.")
+else:
+	print("Testing training speed.")
 
-		history, loss_v, metric_v, this_step = \
-				sess.run([train_op, loss, metric_score, global_step],
-				feed_dict=feed_dict,
-				options=run_options, run_metadata=run_metadata)
 
-		# Print the loss and dice metric in the progress bar.
-		if args.single_class_output:
-			progressbar.set_description(
-						"Epoch {}/{}: (loss={:.4f}, MSE={:.4f})".format(
-						epoch+1, args.epochs, loss_v, metric_v[1]))
+start_time = time.time()
+for epoch in tqdm(range(args.epochs), desc="Epoch #"):
+
+	for i in tqdm(range(total_steps), desc="Step #"):
+
+		if args.inference:
+			feed_dict = {img: imgs}
 		else:
-			progressbar.set_description(
-						"Epoch {}/{}: (loss={:.4f}, dice={:.4f})".format(
-						epoch+1, args.epochs, loss_v, metric_v))
-		progressbar.update(this_step-last_step)
-		last_step = this_step
+			feed_dict = {img: imgs, truth:truths}
 
-'''
-Save the training timeline
-'''
-from tensorflow.python.client import timeline
+		if args.inference:
+			if args.trace:
+				history = sess.run([predictions], feed_dict=feed_dict,
+						options=run_options, run_metadata=run_metadata)
+			else:
+				history = sess.run([predictions], feed_dict=feed_dict)
+		else:
+			if args.trace:
+				history, loss_v, metric_v, this_step = \
+						sess.run([train_op, loss, metric_score, global_step],
+						feed_dict=feed_dict,
+						options=run_options, run_metadata=run_metadata)
+			else:
+				history, loss_v, metric_v, this_step = \
+						sess.run([train_op, loss, metric_score, global_step],
+						feed_dict=feed_dict)
 
-timeline_filename = "./timeline_trace.json"
-fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-chrome_trace = fetched_timeline.generate_chrome_trace_format()
-with open(timeline_filename, "w") as f:
-	print("Saved Tensorflow trace to: {}".format(timeline_filename))
-	print("To view the trace:\n(1) Open Chrome browser.\n"
-	"(2) Go to this url -- chrome://tracing\n"
-	"(3) Click the load button.\n"
-	"(4) Load the file {}.".format(timeline_filename))
-	f.write(chrome_trace)
+stop_time = time.time()
+
+print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
+print("Total images = {:,}".format(args.epochs*args.num_datapoints))
+print("Speed = {:,.3f} images per second".format( \
+			(args.epochs*args.num_datapoints)/(stop_time - start_time)))
+
+if args.trace:
+	"""
+	Save the training timeline
+	"""
+	from tensorflow.python.client import timeline
+
+	timeline_filename = "./timeline_trace.json"
+	fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+	chrome_trace = fetched_timeline.generate_chrome_trace_format()
+	with open(timeline_filename, "w") as f:
+		print("Saved Tensorflow trace to: {}".format(timeline_filename))
+		print("To view the trace:\n(1) Open Chrome browser.\n"
+		"(2) Go to this url -- chrome://tracing\n"
+		"(3) Click the load button.\n"
+		"(4) Load the file {}.".format(timeline_filename))
+		f.write(chrome_trace)
+
+print("Stopped script on {}".format(datetime.datetime.now()))
