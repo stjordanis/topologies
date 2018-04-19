@@ -55,8 +55,8 @@ parser.add_argument("--epochs",
 					default=3,
 					help="Number of epochs")
 parser.add_argument("--intraop_threads",
-					type = int,
-					default=psutil.cpu_count(logical=False), # All physical cores
+					type = int
+					default=psutil.cpu_count(logical=False),
 					help="Number of intraop threads")
 parser.add_argument("--interop_threads",
 					type = int,
@@ -86,6 +86,7 @@ parser.add_argument("--mkl_verbose",
 					action="store_true",
 					default=False,
 					help="Print MKL debug statements.")
+<<<<<<< HEAD
 parser.add_argument("--trace",
 					action="store_true",
 					default=False,
@@ -94,6 +95,8 @@ parser.add_argument("--inference",
 					action="store_true",
 					default=False,
 					help="Test inference speed. Default=Test training speed")
+=======
+>>>>>>> 599104dc117d854a3cd2141e2f1f42f0610ef222
 
 args = parser.parse_args()
 
