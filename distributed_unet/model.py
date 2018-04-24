@@ -71,7 +71,7 @@ def define_model(input_tensor, use_upsampling=False, n_cl_out=1, dropout=0.2, pr
 	conv5 = tf.keras.layers.Conv2D(name='conv5a', filters=512, **params)(pool4)
 	conv5 = tf.keras.layers.Conv2D(name='conv5b', filters=512, **params)(conv5)
 
-	if args.use_upsampling:
+	if use_upsampling:
 		up6 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling2D(name='up6', size=(2, 2))(conv5), conv4], axis=concat_axis)
 	else:
 		up6 = tf.keras.layers.concatenate([tf.keras.layers.Conv2DTranspose(name='transConv6', filters=256, data_format=data_format,
@@ -80,7 +80,7 @@ def define_model(input_tensor, use_upsampling=False, n_cl_out=1, dropout=0.2, pr
 	conv6 = tf.keras.layers.Conv2D(name='conv6a', filters=256, **params)(up6)
 	conv6 = tf.keras.layers.Conv2D(name='conv6b', filters=256, **params)(conv6)
 
-	if args.use_upsampling:
+	if use_upsampling:
 		up7 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling2D(name='up7', size=(2, 2))(conv6), conv3], axis=concat_axis)
 	else:
 		up7 = tf.keras.layers.concatenate([tf.keras.layers.Conv2DTranspose(name='transConv7', filters=128, data_format=data_format,
@@ -89,7 +89,7 @@ def define_model(input_tensor, use_upsampling=False, n_cl_out=1, dropout=0.2, pr
 	conv7 = tf.keras.layers.Conv2D(name='conv7a', filters=128, **params)(up7)
 	conv7 = tf.keras.layers.Conv2D(name='conv7b', filters=128, **params)(conv7)
 
-	if args.use_upsampling:
+	if use_upsampling:
 		up8 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling2D(name='up8', size=(2, 2))(conv7), conv2], axis=concat_axis)
 	else:
 		up8 = tf.keras.layers.concatenate([tf.keras.layers.Conv2DTranspose(name='transConv8', filters=64, data_format=data_format,
@@ -99,7 +99,7 @@ def define_model(input_tensor, use_upsampling=False, n_cl_out=1, dropout=0.2, pr
 	conv8 = tf.keras.layers.Conv2D(name='conv8a', filters=64, **params)(up8)
 	conv8 = tf.keras.layers.Conv2D(name='conv8b', filters=64, **params)(conv8)
 
-	if args.use_upsampling:
+	if use_upsampling:
 		up9 = tf.keras.layers.concatenate([tf.keras.layers.UpSampling2D(name='up9', size=(2, 2))(conv8), conv1], axis=concat_axis)
 	else:
 		up9 = tf.keras.layers.concatenate([tf.keras.layers.Conv2DTranspose(name='transConv9', filters=32, data_format=data_format,
