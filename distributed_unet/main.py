@@ -236,7 +236,7 @@ def main(_):
 
 			while not sess.should_stop():
 
-				batch_idx = step % training_data["num_batches"] # Which batch is the epoch?
+				batch_idx = step // training_data["num_batches"] # Which batch is the epoch?
 
 				data = epoch[batch_idx, 0]
 				labels = epoch[batch_idx, 1]
@@ -268,7 +268,7 @@ def main(_):
 				Validation
 				"""
 				# Calculate metric on test dataset every epoch
-				if (batch_idx==0) and (step > 1):
+				if ((step % training_data["num_batches"]) == 0) and (step > 1):
 
 					if is_chief: # Only valiate on the chief worker
 						validate_model(FLAGS, sess, model, validation_data,
