@@ -173,14 +173,15 @@ def define_model(FLAGS, input_shape, output_shape, num_replicas):
 	model["output"] = predictionMask
 	model["loss"] = dice_coef_loss(msks, predictionMask)
 	model["metric_dice"] = dice_coef(msks, predictionMask)
-	model["loss_test"] = dice_coef_loss(msks, predictionMask)
-	model["metric_dice_test"] = dice_coef(msks, predictionMask)
+
 	model["metric_sensitivity"] = sensitivity(msks, predictionMask)
 	model["metric_specificity"] = specificity(msks, predictionMask)
 
 	model["global_step"] = tf.Variable(0,dtype=tf.int32,trainable=False,name="global_step")
 	# model["global_step"] = tf.train.get_or_create_global_step()
 	#
+	model["metric_dice_test"] = tf.Variable(0,dtype=tf.float32,trainable=False,name="dice_test")
+	model["loss_test"] = tf.Variable(0,dtype=tf.float32,trainable=False,name="loss_test")
 
 	# Print the percent steps complete to TensorBoard
 	#   so that we know how much of the training remains.
@@ -211,9 +212,6 @@ def define_model(FLAGS, input_shape, output_shape, num_replicas):
 	tf.summary.scalar("dice", model["metric_dice"])
 	tf.summary.histogram("dice", model["metric_dice"])
 
-	tf.summary.scalar("dice_test", model["metric_dice_test"])
-	tf.summary.scalar("loss_test", model["loss_test"])
-
 	tf.summary.scalar("sensitivity", model["metric_sensitivity"])
 	tf.summary.histogram("sensitivity", model["metric_sensitivity"])
 	tf.summary.scalar("specificity", model["metric_specificity"])
@@ -224,6 +222,10 @@ def define_model(FLAGS, input_shape, output_shape, num_replicas):
 	tf.summary.image("images", imgs, max_outputs=settings.TENSORBOARD_IMAGES)
 
 	tf.summary.scalar("percent_complete", model["percent_complete"])
+
+	summary_op = tf.summary.merge_all()
+	# tf.summary.scalar("dice_test", model["metric_dice_test"])
+	# tf.summary.scalar("loss_test", model["loss_test"])
 
 	return model
 

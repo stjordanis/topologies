@@ -26,10 +26,10 @@ IMG_HEIGHT = 128
 IMG_WIDTH = 128
 
 IN_CHANNEL_NO = 1
-OUT_CHANNEL_NO = 1
+OUT_CHANNEL_NO = 10
 CHANNELS_LAST = True
 
-EPOCHS = 10
+EPOCHS = 2
 
 BLOCKTIME = 0
 NUM_INTRA_THREADS = cpu_count() - 2
@@ -51,7 +51,7 @@ PS_PORTS = ["2222"]
 WORKER_HOSTS = ["10.100.70.130","10.100.70.129","10.100.70.131"]
 WORKER_PORTS = ["2222", "2222", "2222", "2222"]
 
-CHECKPOINT_DIRECTORY = "checkpoints/"
+CHECKPOINT_DIRECTORY = "checkpoints/unet"
 TENSORBOARD_IMAGES = 3  # How many images to display on TensorBoard
 LOG_SUMMARY_STEPS = 3 # Log summaries after these many steps
 

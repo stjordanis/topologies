@@ -109,18 +109,7 @@ os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 os.environ["OMP_NUM_THREADS"] = str(FLAGS.intra_op_threads)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 
-
 CHECKPOINT_DIRECTORY = settings.CHECKPOINT_DIRECTORY
-
-
-if FLAGS.use_upsampling:
-	method_up = "upsample2D"
-else:
-	method_up = "conv2DTranspose"
-# CHECKPOINT_DIRECTORY = CHECKPOINT_DIRECTORY + "unet," + \
-# 			"lr={},{},intra={},inter={}".format(FLAGS.learning_rate,
-# 			method_up, num_intra_op_threads,
-# 			num_inter_op_threads)
 
 def main(_):
 
@@ -181,6 +170,8 @@ def main(_):
 			epochs = get_epochs(FLAGS.batch_size, training_data["input"],
 							  training_data["label"])
 			training_data["num_batches"] = len(epochs)
+			max_training_steps = training_data["num_batches"] * FLAGS.epochs
+
 			print("Loaded")
 
 			validation_data["num_batches"] = validation_data["length"] // FLAGS.batch_size
@@ -206,16 +197,7 @@ def main(_):
 		# Session
 		# The StopAtStepHook handles stopping after running given steps.
 		# We'll just set the number of steps to be the # of batches * epochs
-		hooks = [tf.train.StopAtStepHook(last_step=training_data["num_batches"] * FLAGS.epochs)]
-
-		# Only the chief does the summary
-		if is_chief:
-			summary_op = tf.summary.merge_all()
-			summary_hook = tf.train.SummarySaverHook(output_dir=CHECKPOINT_DIRECTORY,
-							summary_op=summary_op, save_steps=FLAGS.LOG_SUMMARY_STEPS)
-			chief_only_hooks=[summary_hook]
-		else:
-			chief_only_hooks = None
+		hooks = [tf.train.StopAtStepHook(last_step=max_training_steps)]
 
 		# For synchronous SGD training.
 		# This creates the hook for the MonitoredTrainingSession
@@ -229,12 +211,11 @@ def main(_):
 				is_chief=is_chief,
 				config=config,
 				hooks=hooks,
-				chief_only_hooks=chief_only_hooks,
 				save_summaries_steps=FLAGS.LOG_SUMMARY_STEPS,
 				log_step_count_steps=FLAGS.LOG_SUMMARY_STEPS,
 				checkpoint_dir=CHECKPOINT_DIRECTORY) as sess:
 
-			progressbar = trange(training_data["num_batches"] * FLAGS.epochs)
+			progressbar = trange(max_training_steps-1)
 			step = 0
 			last_epoch = 0
 
@@ -248,9 +229,8 @@ def main(_):
 
 				# For n workers, break up the batch into n sections
 				# Send each worker a different section of the batch
-				data_range = int(FLAGS.batch_size / len(worker_hosts))
+				data_range = FLAGS.batch_size // len(worker_hosts)
 				start = data_range * task_index
-
 				end = start + data_range
 				# Make sure we don't go over
 				if (end >= training_data["length"]):
@@ -268,13 +248,13 @@ def main(_):
 				progressbar.set_description(
 					"Epoch {}/{} (loss={:.3f}, dice={:.3f})".format(last_epoch+1,
 					FLAGS.epochs, loss, dice))
-				progressbar.n = step
+				progressbar.n = step + 1
 
 				"""
 				Validation
 				"""
 				# Calculate metric on test dataset every epoch
-				if epoch_idx != last_epoch:
+				if (epoch_idx != last_epoch) and (last_epoch < FLAGS.epochs):
 
 					last_epoch = epoch_idx
 					if is_chief: # Only valiate on the chief worker
