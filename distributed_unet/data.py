@@ -29,14 +29,20 @@ def load_all_data():
 	print('Loading and preprocessing training data...')
 	print('-'*42)
 	imgs_train, msks_train = load_data(settings.OUT_PATH,"_train")
-	imgs_train, msks_train = update_channels(imgs_train, msks_train, settings.IN_CHANNEL_NO, settings.OUT_CHANNEL_NO, settings.MODE)
+	imgs_train, msks_train = update_channels(imgs_train, msks_train,
+											 settings.IN_CHANNEL_NO,
+											 settings.OUT_CHANNEL_NO,
+											 settings.MODE)
 
 	# Load test data
 	print('-'*38)
 	print('Loading and preprocessing test data...')
 	print('-'*38)
 	imgs_test, msks_test = load_data(settings.OUT_PATH,"_test")
-	imgs_test, msks_test = update_channels(imgs_test, msks_test, settings.IN_CHANNEL_NO, settings.OUT_CHANNEL_NO, settings.MODE)
+	imgs_test, msks_test = update_channels(imgs_test, msks_test,
+										   settings.IN_CHANNEL_NO,
+										   settings.OUT_CHANNEL_NO,
+										   settings.MODE)
 
 	print("Training images shape: {}".format(imgs_train.shape))
 	print("Training masks shape:  {}".format(msks_train.shape))
@@ -46,7 +52,10 @@ def load_all_data():
 	return imgs_train, msks_train, imgs_test, msks_test
 
 
-def get_epoch(batch_size,imgs_train,msks_train):
+def get_epochs(batch_size,imgs_train,msks_train):
+	"""
+	Get an epoch of batches in random order
+	"""
 
 	# Assuming imgs_train and msks_train are the same size
 	train_size = imgs_train.shape[0]

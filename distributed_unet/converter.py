@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
 import os
 import nibabel as nib
 import numpy.ma as ma
@@ -20,9 +40,9 @@ for item in check_dir:
 		print("Removed old version of {}".format(item))
 
 def parse_segments(seg):
-	
+
 	# Each channel corresponds to a different region of the tumor, decouple and stack these
-	
+
 	msks_parsed = []
 	for slice in range(seg.shape[-1]):
 		curr = seg[:,:,slice]
@@ -32,7 +52,7 @@ def parse_segments(seg):
 		none = ma.masked_not_equal(curr,0).filled(fill_value=0)
 
 		msks_parsed.append(np.dstack((none,necrotic,edema,GD)))
-	
+
 	# Replace all tumorous areas with 1 (previously marked as 1, 2 or 4)
 	mask = np.asarray(msks_parsed)
 	mask[mask > 0] = 1
@@ -40,25 +60,25 @@ def parse_segments(seg):
 	return mask
 
 def parse_images(img):
-	
+
 	slices = []
 	for slice in range(img.shape[-1]):
 		curr = img[:,:,slice]
 		slices.append(curr)
-	
+
 	return np.asarray(slices)
 
 def stack_img_slices(mode_track, stack_order):
-	
+
 	# Put final image channels in the order listed in stack_order
-	
+
 	full_brain = []
 	for slice in range(len(mode_track['t1'])):
 		current_slice = []
 		for mode in stack_order:
 			current_slice.append(mode_track[mode][slice,:,:])
 		full_brain.append(np.dstack(current_slice))
-	
+
 	# Normalize stacked images (inference will not work if this is not performed)
 	stack = np.asarray(full_brain)
 	stack = (stack - np.mean(stack))/(np.std(stack))
@@ -80,7 +100,7 @@ def resize_data(dataset, new_size):
 	return resized
 
 def save_data(imgs_all, msks_all, split, save_path):
-	
+
 	imgs_all = np.asarray(imgs_all)
 	msks_all = np.asarray(msks_all)
 
@@ -94,25 +114,25 @@ def save_data(imgs_all, msks_all, split, save_path):
 	if os.path.isfile("{}imgs_train.npy".format(save_path)):
 
 		# Open one file at a time (these will be large) and clear buffer immediately after concatenate/save
-		
+
 		imgs_train = np.load("{}imgs_train.npy".format(save_path))
 		np.save("{}imgs_train.npy".format(save_path), np.concatenate((imgs_train,new_imgs_train), axis = 0))
 		imgs_train = []
-		
+
 		msks_train = np.load("{}msks_train.npy".format(save_path))
 		np.save("{}msks_train.npy".format(save_path), np.concatenate((msks_train,new_msks_train), axis = 0))
 		msks_train = []
-		
+
 		imgs_test = np.load("{}imgs_test.npy".format(save_path))
 		np.save("{}imgs_test.npy".format(save_path), np.concatenate((imgs_test,new_imgs_test), axis = 0))
 		imgs_test = []
-		
+
 		msks_test = np.load("{}msks_test.npy".format(save_path))
 		np.save("{}msks_test.npy".format(save_path), np.concatenate((msks_test,new_msks_test), axis = 0))
 		msks_test = []
 
 	else:
-		
+
 		np.save("{}imgs_train.npy".format(save_path), new_imgs_train)
 		np.save("{}msks_train.npy".format(save_path), new_msks_train)
 		np.save("{}imgs_test.npy".format(save_path), new_imgs_test)
@@ -133,7 +153,7 @@ for subdir, dir, files in tqdm(os.walk(root_dir)):
 	if all(all_there):
 
 		mode_track = {mode:[] for mode in img_modes}
-		
+
 		for file in files:
 
 			if file.endswith('seg.nii.gz'):

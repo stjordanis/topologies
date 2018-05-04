@@ -57,7 +57,7 @@ from tqdm import tqdm
 from tqdm import trange
 
 from model import define_model, validate_model
-from data import load_datasets, get_epoch
+from data import load_datasets, get_epochs
 import multiprocessing
 import subprocess
 import signal
@@ -175,9 +175,9 @@ def main(_):
 			training_data, validation_data = load_datasets()
 
 			print("Loading epoch")
-			epoch = get_epoch(FLAGS.batch_size, training_data["input"],
+			epochs = get_epochs(FLAGS.batch_size, training_data["input"],
 							  training_data["label"])
-			training_data["num_batches"] = len(epoch)
+			training_data["num_batches"] = len(epochs)
 			print("Loaded")
 
 			validation_data["num_batches"] = validation_data["length"] // FLAGS.batch_size
@@ -233,13 +233,15 @@ def main(_):
 
 			progressbar = trange(training_data["num_batches"] * FLAGS.epochs)
 			step = 0
+			last_epoch = 0
 
 			while not sess.should_stop():
 
-				batch_idx = step // training_data["num_batches"] # Which batch is the epoch?
+				epoch_idx = step // training_data["num_batches"] # Which epoch?
+				batch_idx = step % training_data["num_batches"] # Which batch is the epoch?
 
-				data = epoch[batch_idx, 0]
-				labels = epoch[batch_idx, 1]
+				data = epochs[batch_idx, 0]
+				labels = epochs[batch_idx, 1]
 
 				# For n workers, break up the batch into n sections
 				# Send each worker a different section of the batch
@@ -261,21 +263,22 @@ def main(_):
 
 				# Print the loss and dice metric in the progress bar.
 				progressbar.set_description(
-					"(loss={:.3f}, dice={:.3f})".format(loss, dice))
+					"Epoch {} (loss={:.3f}, dice={:.3f})".format(epoch_idx, loss, dice))
 				progressbar.n = step
 
 				"""
 				Validation
 				"""
 				# Calculate metric on test dataset every epoch
-				if ((step % training_data["num_batches"]) == 0) and (step > 1):
+				if epoch_idx != last_epoch:
 
+					last_epoch = epoch_idx
 					if is_chief: # Only valiate on the chief worker
 						validate_model(FLAGS, sess, model, validation_data,
-									   batch_idx)
+									   epoch_idx)
 
 					print("Shuffling epoch")
-					epoch = get_epoch(FLAGS.batch_size,
+					epochs = get_epochs(FLAGS.batch_size,
 									  training_data["input"],
 									  training_data["label"])
 

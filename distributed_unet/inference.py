@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
 '''
 This loads the trained model and runs it on the test set.
 Should provide a sanity check on the TensorFlow model.
@@ -24,7 +44,10 @@ def load_test_data():
     print('Loading and preprocessing test data...')
     print('-'*38)
     imgs_test, msks_test = load_data(settings_dist.OUT_PATH,"_test")
-    imgs_test, msks_test = update_channels(imgs_test, msks_test, settings_dist.IN_CHANNEL_NO, settings_dist.OUT_CHANNEL_NO, settings_dist.MODE)
+    imgs_test, msks_test = update_channels(imgs_test, msks_test,
+                            settings_dist.IN_CHANNEL_NO,
+                            settings_dist.OUT_CHANNEL_NO,
+                            settings_dist.MODE)
 
     return imgs_test, msks_test
 
@@ -48,7 +71,8 @@ with tf.Session(graph=tf.Graph()) as sess:
 
     msks_test_predictions = []
 
-    for idx in tqdm(range(0, imgs_test.shape[0] - batch_size, batch_size), desc="Calculating metrics on test dataset", leave=False):
+    for idx in tqdm(range(0, imgs_test.shape[0] - batch_size, batch_size),
+                    desc="Calculating metrics on test dataset", leave=False):
         x_test = imgs_test[idx:(idx+batch_size)]
         y_test = msks_test[idx:(idx+batch_size)]
 
