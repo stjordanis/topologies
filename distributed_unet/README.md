@@ -23,7 +23,6 @@ Tensorflow 1.4.0
 SimpleITK
 opencv-python
 h5py
-shutil
 tqdm
 ```
 
@@ -33,7 +32,7 @@ We use Intel optimized TensorFlow 1.4.0 for Python 2.7. Install instructions can
 
 ## Required Data
 
-Data files are not included in this public repo but can accessed by registering (using your institutional email address) at the following link: https://www.smir.ch/BRATS/Start2016. Once access has been granted, you may download the raw data. To convert those datasets into numpy arrays having shape [num_images, x_dimension (128), y_dimension (128), num_channels] run `python converter.py` after changing its root_dir variable to point to the location your MICCAI_BraTS... folder (processing will take a few minutes). Once complete, the following four files will be saved in the `/home/unet/data/slices/Results/` folder on the parameter server.
+Data files are not included in this public repo but can accessed by registering (using your institutional email address) at the following link: http://braintumorsegmentation.org/. Once access has been granted, you may download the raw data. To convert those datasets into numpy arrays having shape [num_images, x_dimension (128), y_dimension (128), num_channels] run `python converter.py` after changing its root_dir variable to point to the location your MICCAI_BraTS... folder (processing will take a few minutes). Once complete, the following four files will be saved in the `/home/unet/data/slices/Results/` folder on the parameter server.
 
 ```
 -rw-r----- 1 bduser bduser  3250585696 Nov 14 11:42 imgs_test.npy
@@ -58,15 +57,12 @@ We provide the following flags for modifying system variables in Multi-Node exec
 
 ```
 --use_upsampling    # Boolean, Use the UpSampling2D method in place of Conv2DTranspose (default: False)
---num_threads       # Int, Number of intra-op threads (default: 50)
+--num_threads       # Int, Number of intra-op threads (default: # cores - 2)
 --num_inter_threads # Int, Number of inter-op threads (default: 2)
 --batch_size        # Int, Images per batch (default: 128)
 --blocktime         # Int, Set KMP_BLOCKTIME environment variable (default: 0)
 --epochs            # Int, Number of epochs to train (default: 10)
 --learningrate      # Float, Learning rate (default: 0.0005)
---const_learningrate # Bool, Pass this flag alone if a constant learningrate is desired (default: False)
---decay_steps # Int, Steps taken to decay learningrate by lr_fraction% (default: 150)
---lr_fraction # Float, learningrate's fraction of its original value after decay_steps global steps (default: 0.25)
 ```
 
 ## Multi-Node Execution
