@@ -259,4 +259,8 @@ def validate_model(FLAGS, sess, model, validation_data, epoch):
 	print("\nTEST DATASET (Epoch {} of {})\n" \
 		  "Loss on test dataset = {:.4f}\n" \
 		  "Dice on test dataset = {:.4f}\n" \
-		  .format(epoch, FLAGS.epochs,loss_v_test, dice_v_test))
+		  "Sensitivity on test dataset = {:.4f}\n" \
+		  "Specificity on test dataset = {:.4f}\n" \
+		  .format(epoch, FLAGS.epochs,
+		  loss_v_test, dice_v_test,
+		  sens_v_test, spec_v_test))
