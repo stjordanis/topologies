@@ -109,7 +109,10 @@ os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 os.environ["OMP_NUM_THREADS"] = str(FLAGS.intra_op_threads)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 
+
 CHECKPOINT_DIRECTORY = settings.CHECKPOINT_DIRECTORY
+
+
 if FLAGS.use_upsampling:
 	method_up = "upsample2D"
 else:
@@ -263,7 +266,7 @@ def main(_):
 
 				# Print the loss and dice metric in the progress bar.
 				progressbar.set_description(
-					"Epoch {} (loss={:.3f}, dice={:.3f})".format(epoch_idx, loss, dice))
+					"Epoch {} (loss={:.3f}, dice={:.3f})".format(epoch_idx+1, loss, dice))
 				progressbar.n = step
 
 				"""
@@ -288,4 +291,7 @@ def main(_):
 
 if __name__ == "__main__":
 
+	import datetime
+	print("Started at {}".format(datetime.datetime.now()))
 	tf.app.run()
+	print("Stopped at {}".format(datetime.datetime.now()))
