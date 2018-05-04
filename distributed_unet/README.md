@@ -6,7 +6,7 @@ UNet architecture for Multimodal Brain Tumor Segmentation, built with TensorFlow
 
 This repo contains code for multi-node execution:
 
-	test_dist.py: Multi-node implementation for synchronous weight updates, optimized for use on Intel KNL servers.
+	main.py: Multi-node implementation for synchronous weight updates, optimized for use on Intel KNL servers.
 
 ## Setup
 
@@ -48,13 +48,13 @@ Copy these files to `/home/unet/data/slices/Results/` on all the worker nodes as
 
 Once environments are constructed which meets the above requirements, clone this repo anywhere on the parameter server.
 
-Within the cloned directory 'unet', open `settings_dist.py` and replace the current addresses:ports in the `ps_hosts` and `worker_hosts` lists with the appropriate addresses:ports for your cluster.
+Within the cloned directory 'unet', open `settings.py` and replace the current addresses:ports in the `ps_hosts` and `worker_hosts` lists with the appropriate addresses:ports for your cluster.
 
 Depending on your hardware, you may need to modify the NUM_INTRA_THREADS value. This code was developed on Intel KNL and SKL servers having 68 and 56 cores each, so intra-op thread values of 57 and 50 were most ideal. Please note that maxing out the NUM_INTRA_THREADS value may result in segmentation faults or other memory issues. It is recommended to turn off hyper-threading to prevent resource exhaustion.
 
-Note that a natural consequence of synchronizing updates across several workers is a proportional decrease in the number of weight updates per epoch and slower convergence. To combat this slowdown and reduce the training time in multi-node execution, we default to a large initial learning rate which decays as the model trains. This learning rate is also contained in `settings_dist.py`.
+Note that a natural consequence of synchronizing updates across several workers is a proportional decrease in the number of weight updates per epoch and slower convergence. To combat this slowdown and reduce the training time in multi-node execution, we default to a large initial learning rate which decays as the model trains. This learning rate is also contained in `settings.py`.
 
-We provide the following flags for modifying system variables in Multi-Node execution: 
+We provide the following flags for modifying system variables in Multi-Node execution:
 
 ```
 --use_upsampling    # Boolean, Use the UpSampling2D method in place of Conv2DTranspose (default: False)
@@ -76,40 +76,40 @@ To initiate training, enter the command `./run_distributed_training.sh` in this 
 
 This command will run the `distributed_train.yml` playbook and initiate the following:
 
-1. Create the `inv.yml` file from the addresses listed in `settings_dist.py`.
+1. Create the `inv.yml` file from the addresses listed in `settings.py`.
 2. Synchronize all files from the `unet` directory on the parameter server to the `unet` directories on the workers.
 3. Start the parameter server with the following command:
 
 ```
-Parameter Server:	numactl -p 1 python test_dist.py 
+Parameter Server:	numactl -p 1 python main.py
 ```
 
 4. Run the `Distributed.sh` bash script on all the workers, which executes a run command on each worker:
 
 ```
-Worker 0:	numactl -p 1 python test_dist.py 
-Worker 1:	numactl -p 1 python test_dist.py 
-Worker 2:	numactl -p 1 python test_dist.py
-Worker 3:	numactl -p 1 python test_dist.py 
+Worker 0:	numactl -p 1 python main.py
+Worker 1:	numactl -p 1 python main.py
+Worker 2:	numactl -p 1 python main.py
+Worker 3:	numactl -p 1 python main.py
 ```
 
-5. While these commands are running, ansible registers their outputs (global step, training loss, dice score, etc.) and saves that to `training.log`. 
+5. While these commands are running, ansible registers their outputs (global step, training loss, dice score, etc.) and saves that to `training.log`.
 
 To view training progress, as well as sets of images, predictions, and ground truth masks, direct your chrome browser to `http://your_chief_worker_address:6006/`. After a few moments, the webpage will populate and a series of training visualizations will become available. Explore the Scalars, Images, Graphs, Distributions, and Histograms tabs for detailed visualizations of training progress. You may need to create a SSH tunnel if port 6006 is not visible on your chief worker.
 
 ## Inference
 
-To perform inference in TensorFlow with a model trained in a distributed setting, the model must be saved to a common location during training. We recommend saving to an NFS drive visible to all nodes in the cluster. 
+To perform inference in TensorFlow with a model trained in a distributed setting, the model must be saved to a common location during training. We recommend saving to an NFS drive visible to all nodes in the cluster.
 
-To perform inference on the test set (`imgs_test.npy` and `msks_test.npy`) update the `CHECKPOINT_DIRECTORY` variable in `settings_dist.py` to reflect the location of the saved `.pb` model. Execute the following command to perform inference using the trained model:
+To perform inference on the test set (`imgs_test.npy` and `msks_test.npy`) update the `CHECKPOINT_DIRECTORY` variable in `settings.py` to reflect the location of the saved `.pb` model. Execute the following command to perform inference using the trained model:
 
 ```
 python inference.py
 ```
 
-When `inference.py` completes, the final dice coefficient will be printed to stdout and the predicted masks will be saved in the directory, specified by `OUT_PATH` in `settings_dist.py`, under the name `msks_test_predictions.npy`. These prediction masks are the same dimensions as the input data and serve as helpful sanity checks when evaluating the quality of a trained model.
+When `inference.py` completes, the final dice coefficient will be printed to stdout and the predicted masks will be saved in the directory, specified by `OUT_PATH` in `settings.py`, under the name `msks_test_predictions.npy`. These prediction masks are the same dimensions as the input data and serve as helpful sanity checks when evaluating the quality of a trained model.
 
-If performing inference on smaller subsets of the test data, or smaller test sets in general, the `batch_size` variable can be adjusted within `inference.py`. 
+If performing inference on smaller subsets of the test data, or smaller test sets in general, the `batch_size` variable can be adjusted within `inference.py`.
 
 ## Sample Generation/Validation
 
@@ -127,10 +127,3 @@ Whenever using and/or refering to the BraTS datasets in your publications, pleas
 
 1. https://www.ncbi.nlm.nih.gov/pubmed/25494501
 2. https://www.ncbi.nlm.nih.gov/pubmed/28872634
-
-
-
-
-
-
-

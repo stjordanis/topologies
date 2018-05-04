@@ -7,7 +7,7 @@ import tensorflow as tf
 from preprocess import load_data, update_channels
 from tqdm import tqdm
 import numpy as np
-import settings_dist
+import settings
 import os
 from tempfile import TemporaryFile
 import argparse
@@ -19,7 +19,7 @@ args = parser.parse_args()
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 
 batch_size = 1
-export_dir=settings_dist.CHECKPOINT_DIRECTORY + "saved_model/"
+export_dir=settings.CHECKPOINT_DIRECTORY + "saved_model/"
 print("Loading trained TensorFlow model from directory {}".format(export_dir))
 
 def load_test_data():
@@ -29,7 +29,7 @@ def load_test_data():
     print('Loading and preprocessing test data...')
     print('-'*38)
     imgs_test, msks_test = load_data(args.data_dir,"_test")
-    imgs_test, msks_test = update_channels(imgs_test, msks_test, settings_dist.IN_CHANNEL_NO, settings_dist.OUT_CHANNEL_NO, settings_dist.MODE)
+    imgs_test, msks_test = update_channels(imgs_test, msks_test, settings.IN_CHANNEL_NO, settings.OUT_CHANNEL_NO, settings.MODE)
 
     return imgs_test, msks_test
 

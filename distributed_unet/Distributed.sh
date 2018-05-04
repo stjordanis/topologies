@@ -24,12 +24,9 @@
 # pip install h5py opencv-python simpleITK tqdm
 
 # Activate the correct Tensorflow environment (conda)
-source activate tf
+source activate tf17_mkl_vivek
 cd $1
 # Run the distributed tensorflow
 # We flush messages immediately rather than buffering them.
 # All messages go to the local training.log file
-stdbuf -oL numactl -p 1 python $1test_dist.py --ip=$2 --is_sync=1 > $1training.log
-
-
-
+stdbuf -oL numactl -p 1 python $1main.py --ip=$2 --is_sync=1 > $1training.log
