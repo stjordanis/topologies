@@ -232,6 +232,8 @@ def validate_model(FLAGS, sess, model, validation_data, epoch):
 
 	dice_v_test = 0.0
 	loss_v_test = 0.0
+	sens_v_test = 0.0
+	spec_v_test = 0.0
 
 	for idx in tqdm(range(0, validation_data["length"] - FLAGS.batch_size, FLAGS.batch_size),
 		desc="Calculating metrics on test dataset", leave=False):
@@ -245,14 +247,16 @@ def validate_model(FLAGS, sess, model, validation_data, epoch):
 
 		feed_dict = {model["input"]: x_test, model["label"]: y_test}
 
-		l_v, d_v = sess.run([model["loss_test"],
-			model["metric_dice_test"]], feed_dict=feed_dict)
+		l_v, d_v, sens_v, spec_v = sess.run([model["loss_test"],
+			model["metric_dice_test"], model["metric_sensitivity"],
+			model["metric_specificity"]], feed_dict=feed_dict)
 
 		dice_v_test += d_v / (validation_data["length"] // FLAGS.batch_size)
 		loss_v_test += l_v / (validation_data["length"] // FLAGS.batch_size)
-
+		sens_v_test += sens_v / (validation_data["length"] // FLAGS.batch_size)
+		spec_v_test += spec_v / (validation_data["length"] // FLAGS.batch_size)
 
 	print("\nTEST DATASET (Epoch {} of {})\n" \
 		  "Loss on test dataset = {:.4f}\n" \
-		  "Dice on test dataset = {:.4f}\n\n" \
+		  "Dice on test dataset = {:.4f}\n" \
 		  .format(epoch, FLAGS.epochs,loss_v_test, dice_v_test))

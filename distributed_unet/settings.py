@@ -53,7 +53,7 @@ WORKER_PORTS = ["2222", "2222", "2222", "2222"]
 
 CHECKPOINT_DIRECTORY = "checkpoints/"
 TENSORBOARD_IMAGES = 3  # How many images to display on TensorBoard
-LOG_SUMMARY_STEPS = 10 # Log summaries after these many steps
+LOG_SUMMARY_STEPS = 3 # Log summaries after these many steps
 
 # TensorBoard
 # To run TensorBoard you must log into the chief worker (first one in the WORKER_HOSTS list).
