@@ -266,7 +266,8 @@ def main(_):
 
 				# Print the loss and dice metric in the progress bar.
 				progressbar.set_description(
-					"Epoch {} (loss={:.3f}, dice={:.3f})".format(epoch_idx+1, loss, dice))
+					"Epoch {}/{} (loss={:.3f}, dice={:.3f})".format(epoch_idx+1,
+					FLAGS.epochs, loss, dice))
 				progressbar.n = step
 
 				"""
