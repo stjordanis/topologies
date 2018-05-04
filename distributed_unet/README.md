@@ -59,7 +59,7 @@ We provide the following flags for modifying system variables in Multi-Node exec
 --use_upsampling    # Boolean, Use the UpSampling2D method in place of Conv2DTranspose (default: False)
 --num_threads       # Int, Number of intra-op threads (default: # cores - 2)
 --num_inter_threads # Int, Number of inter-op threads (default: 2)
---batch_size        # Int, Images per batch (default: 128)
+--batch_size        # Int, Images per batch (default: 1024)
 --blocktime         # Int, Set KMP_BLOCKTIME environment variable (default: 0)
 --epochs            # Int, Number of epochs to train (default: 10)
 --learningrate      # Float, Learning rate (default: 0.0005)
