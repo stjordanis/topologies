@@ -59,8 +59,8 @@ from tqdm import trange
 from model import define_model, validate_model
 from data import load_datasets, get_epochs
 import multiprocessing
-import subprocess
-import signal
+
+import datetime
 
 # Unset proxy env variable to avoid gRPC errors
 del os.environ["http_proxy"]
@@ -197,7 +197,7 @@ def main(_):
 		# Session
 		# The StopAtStepHook handles stopping after running given steps.
 		# We'll just set the number of steps to be the # of batches * epochs
-		hooks = [tf.train.StopAtStepHook(last_step=max_training_steps+len(worker_list))]
+		hooks = [tf.train.StopAtStepHook(last_step=max_training_steps)]
 
 		# For synchronous SGD training.
 		# This creates the hook for the MonitoredTrainingSession
@@ -215,12 +215,11 @@ def main(_):
 				log_step_count_steps=FLAGS.LOG_SUMMARY_STEPS,
 				checkpoint_dir=CHECKPOINT_DIRECTORY) as sess:
 
-			progressbar = trange(max_training_steps-1)
+			progressbar = trange(max_training_steps)
 			step = 0
 			last_epoch = 0
 
-
-			while not sess.should_stop():
+			while (not sess.should_stop()) and (step < max_training_steps):
 
 				epoch_idx = step // training_data["num_batches"] # Which epoch?
 				batch_idx = step % training_data["num_batches"] # Which batch is the epoch?
@@ -274,12 +273,20 @@ def main(_):
 									  training_data["label"])
 
 
-		print("\n\nFinished work on this node.")
+		# Move the checkpoint to a unique filename so that we can
+		# support restarted nodes but restarting the job will start
+		# from scratch
+		if is_chief:
+			import time
+			timestr = "run_" + time.strftime("%Y%m%d-%H%M%S")
+			NEWDIR = os.path.join(settings.SAVED_MODEL_DIRECTORY, timestr)
+			import shutil
+			shutil.move(CHECKPOINT_DIRECTORY, NEWDIR)
 
+		print("\n\nFinished work on this node.")
+		print("Stopped at {}".format(datetime.datetime.now()))
 
 if __name__ == "__main__":
 
-	import datetime
 	print("Started at {}".format(datetime.datetime.now()))
 	tf.app.run()
-	print("Stopped at {}".format(datetime.datetime.now()))

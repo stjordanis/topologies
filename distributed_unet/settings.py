@@ -31,7 +31,7 @@ CHANNELS_LAST = True
 
 EPOCHS = 10
 
-BLOCKTIME = 0
+BLOCKTIME = 1
 NUM_INTRA_THREADS = cpu_count() - 2
 NUM_INTER_THREADS = 2
 BATCH_SIZE = 1024
@@ -52,6 +52,7 @@ WORKER_HOSTS = ["10.100.70.130","10.100.70.129","10.100.70.131"]
 WORKER_PORTS = ["2222", "2222", "2222", "2222"]
 
 CHECKPOINT_DIRECTORY = "checkpoints/unet"
+SAVED_MODEL_DIRECTORY = "saved_models/unet"
 TENSORBOARD_IMAGES = 3  # How many images to display on TensorBoard
 LOG_SUMMARY_STEPS = 3 # Log summaries after these many steps
 
