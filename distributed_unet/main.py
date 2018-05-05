@@ -197,7 +197,7 @@ def main(_):
 		# Session
 		# The StopAtStepHook handles stopping after running given steps.
 		# We'll just set the number of steps to be the # of batches * epochs
-		hooks = [tf.train.StopAtStepHook(last_step=max_training_steps)]
+		hooks = [tf.train.StopAtStepHook(last_step=max_training_steps+len(worker_list))]
 
 		# For synchronous SGD training.
 		# This creates the hook for the MonitoredTrainingSession
@@ -218,6 +218,7 @@ def main(_):
 			progressbar = trange(max_training_steps-1)
 			step = 0
 			last_epoch = 0
+
 
 			while not sess.should_stop():
 
@@ -245,10 +246,16 @@ def main(_):
 					feed_dict=feed_dict)
 
 				# Print the loss and dice metric in the progress bar.
-				progressbar.set_description(
-					"Epoch {}/{} (loss={:.3f}, dice={:.3f})".format(last_epoch+1,
-					FLAGS.epochs, loss, dice))
-				progressbar.n = step + 1
+				if (step < max_training_steps):
+					progressbar.set_description(
+						"Epoch {}/{} (loss={:.3f}, dice={:.3f})".format(last_epoch+1,
+						FLAGS.epochs, loss, dice))
+					progressbar.n = step + 1
+				else:
+					progressbar.set_description(
+						"Epoch {}/{} (loss={:.3f}, dice={:.3f})".format(FLAGS.epochs,
+						FLAGS.epochs, loss, dice))
+					progressbar.n = max_training_steps
 
 				"""
 				Validation

@@ -180,14 +180,15 @@ def define_model(FLAGS, input_shape, output_shape, num_replicas):
 	model["global_step"] = tf.Variable(0,dtype=tf.int32,trainable=False,name="global_step")
 	# model["global_step"] = tf.train.get_or_create_global_step()
 	#
-	model["metric_dice_test"] = tf.Variable(0,dtype=tf.float32,trainable=False,name="dice_test")
-	model["loss_test"] = tf.Variable(0,dtype=tf.float32,trainable=False,name="loss_test")
+	model["metric_dice_test"] = dice_coef(msks, predictionMask)
+	model["loss_test"] = dice_coef_loss(msks, predictionMask)
 
 	# Print the percent steps complete to TensorBoard
 	#   so that we know how much of the training remains.
 	num_steps_tf = tf.constant(num_datapoints / FLAGS.batch_size * FLAGS.epochs,
 				   tf.float32)
-	model["percent_complete"] = tf.constant(100.0) * tf.to_float(model["global_step"]) / num_steps_tf
+	model["percent_complete"] = tf.constant(100.0) * \
+			tf.to_float(model["global_step"]) / num_steps_tf
 
 	learning_rate = tf.convert_to_tensor(FLAGS.learning_rate, dtype=tf.float32)
 	optimizer = tf.train.AdamOptimizer(learning_rate)
