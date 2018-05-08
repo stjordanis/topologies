@@ -25,7 +25,7 @@ parameter server and worker node IPs in settings_dist.py
 
 '''
 
-from settings_dist import PS_HOSTS, WORKER_HOSTS
+from settings import PS_HOSTS, WORKER_HOSTS
 
 with open('inv.yml','w') as txt_file:
 
