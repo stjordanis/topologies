@@ -92,6 +92,8 @@ tf.app.flags.DEFINE_boolean("use_upsampling", settings.USE_UPSAMPLING,
 tf.app.flags.DEFINE_integer("LOG_SUMMARY_STEPS", settings.LOG_SUMMARY_STEPS,
 							"How many steps per writing summary log")
 
+tf.app.flags.DEFINE_integer("KMP_BLOCKTIME", settings.BLOCKTIME,"KMP_BLOCKTIME")
+
 if (FLAGS.ip in ps_hosts):
 	job_name = "ps"
 	task_index = ps_hosts.index(FLAGS.ip)
@@ -104,7 +106,7 @@ else:
 		format(FLAGS.ip))
 	exit()
 
-os.environ["KMP_BLOCKTIME"] = str(settings.BLOCKTIME)
+os.environ["KMP_BLOCKTIME"] = str(FLAGS.KMP_BLOCKTIME)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 os.environ["OMP_NUM_THREADS"] = str(FLAGS.intra_op_threads)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
@@ -145,6 +147,7 @@ def main(_):
 		if is_chief:
 			print("I am the chief worker {} with task #{}".format(
 				worker_hosts[task_index], task_index))
+			print("Checkpoints saved to: {}".format(CHECKPOINT_DIRECTORY))
 		else:
 			print("I am worker {} with task #{}".format(
 				worker_hosts[task_index], task_index))
@@ -282,11 +285,13 @@ def main(_):
 			NEWDIR = os.path.join(settings.SAVED_MODEL_DIRECTORY, timestr)
 			import shutil
 			shutil.move(CHECKPOINT_DIRECTORY, NEWDIR)
+			print("Moved checkpoints to to: {}".format(NEWDIR))
 
 		print("\n\nFinished work on this node.")
 		print("Stopped at {}".format(datetime.datetime.now()))
 
 if __name__ == "__main__":
 
+	print("Runtime flags = {}".format(tf.app.flags.FLAGS.flag_values_dict())) # Print the flags
 	print("Started at {}".format(datetime.datetime.now()))
 	tf.app.run()
