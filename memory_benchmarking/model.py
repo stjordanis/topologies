@@ -103,11 +103,12 @@ def unet3D(input_img, use_upsampling=False, n_out=1, dropout=0.2,
 	conv4 = K.layers.Activation("relu")(conv4)
 
 	if use_upsampling:
-		up4 = K.layers.concatenate([K.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4), conv3], axis=concat_axis)
+		up = K.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4)
 	else:
-		up4 = K.layers.concatenate([K.layers.Conv3DTranspose(name="transConv4", filters=512, data_format=data_format,
-						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv4), conv3], axis=concat_axis)
+		up = K.layers.Conv3DTranspose(name="transConv4", filters=512, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv4)
 
+	up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
 
 	conv5 = K.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
 	conv5 = K.layers.BatchNormalization()(conv5)
@@ -117,10 +118,12 @@ def unet3D(input_img, use_upsampling=False, n_out=1, dropout=0.2,
 	conv5 = K.layers.Activation("relu")(conv5)
 
 	if use_upsampling:
-		up5 = K.layers.concatenate([K.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5), conv2], axis=concat_axis)
+		up = K.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5)
 	else:
-		up5 = K.layers.concatenate([K.layers.Conv3DTranspose(name="transConv5", filters=256, data_format=data_format,
-						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv5), conv2], axis=concat_axis)
+		up = K.layers.Conv3DTranspose(name="transConv5", filters=256, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv5)
+
+	up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
 
 	conv6 = K.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
 	conv6 = K.layers.BatchNormalization()(conv6)
@@ -130,15 +133,17 @@ def unet3D(input_img, use_upsampling=False, n_out=1, dropout=0.2,
 	conv6 = K.layers.Activation("relu")(conv6)
 
 	if use_upsampling:
-		up6 = K.layers.concatenate([K.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6), conv1], axis=concat_axis)
+		up = K.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6)
 	else:
-		up6 = K.layers.concatenate([K.layers.Conv3DTranspose(name="transConv6", filters=128, data_format=data_format,
-						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv6), conv1], axis=concat_axis)
+		up = K.layers.Conv3DTranspose(name="transConv6", filters=128, data_format=data_format,
+						   kernel_size=(2, 2, 2), strides=(2, 2, 2), padding="same")(conv6)
 
-	conv7 = K.layers.Conv3D(name="conv7a", filters=128, **params)(up6)
+	up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
+
+	conv7 = K.layers.Conv3D(name="conv7a", filters=64, **params)(up6)
 	conv7 = K.layers.BatchNormalization()(conv7)
 	conv7 = K.layers.Activation("relu")(conv7)
-	conv7 = K.layers.Conv3D(name="conv7b", filters=128, **params)(conv7)
+	conv7 = K.layers.Conv3D(name="conv7b", filters=64, **params)(conv7)
 	conv7 = K.layers.BatchNormalization()(conv7)
 	conv7 = K.layers.Activation("relu")(conv7)
 	pred = K.layers.Conv3D(name="Prediction", filters=n_out, kernel_size=(1, 1, 1),
