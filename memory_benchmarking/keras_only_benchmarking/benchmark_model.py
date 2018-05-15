@@ -233,7 +233,7 @@ if args.inference:
 	model.predict_generator(get_imgs(),
 							steps=total_steps, verbose=1)
 else:
-	model.fit_generator(get_batch(), steps_pe_epoch=total_steps,
+	model.fit_generator(get_batch(), steps_per_epoch=total_steps,
 					    epochs=args.epochs, verbose=1)
 
 stop_time = time.time()
