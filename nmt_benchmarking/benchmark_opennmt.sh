@@ -28,7 +28,7 @@ onmt-build-vocab --size 50000 --save_vocab data/toy-ende/tgt-vocab.txt data/toy-
 
 clear
 
-echo "$(tput setaf 2)Training for a single step just to get random weights for model$(tput setaf 7)"
+echo "$(tput setaf 2)Training model $nmt_model for a single step just to get random weights for model$(tput setaf 7)"
 echo " "
 echo " "
 
@@ -42,7 +42,7 @@ onmt-main train_and_eval --model_type $nmt_model --config config/opennmt-default
 
 clear
 
-echo "$(tput setaf 2)Creating predictions with batch size of $batch_size$(tput setaf 7)"
+echo "$(tput setaf 2)Creating predictions for model $nmt_modelwith batch size of $batch_size$(tput setaf 7)"
 echo " "
 echo " "
 sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/opennmt-defaults.yml
