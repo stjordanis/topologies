@@ -1,6 +1,6 @@
 # Benchmarking script for neural machine translation.
 
-This uses the OpenNMT TensorFlow project to benchmark deep learning RNN topologies.
+This uses the [OpenNMT TensorFlow](http://opennmt.net/) project to benchmark deep learning RNN topologies.
 
 Just run the bash script in whatever environment you have TensorFlow installed.
 
