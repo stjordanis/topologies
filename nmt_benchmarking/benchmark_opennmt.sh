@@ -5,7 +5,7 @@ batch_size=64   # Batch size for inference
 
 # There are several NMT models to choose:
 # --model_type {ListenAttendSpell,NMTBig,NMTMedium,NMTSmall,SeqTagger,Transformer,TransformerAAN,TransformerBig}
-model_type=NMTSmall 
+nmt_model=NMTSmall 
 
 rm -rf OpenNMT-tf
 
