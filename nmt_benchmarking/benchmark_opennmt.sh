@@ -29,7 +29,7 @@ onmt-build-vocab --size 50000 --save_vocab data/toy-ende/tgt-vocab.txt data/toy-
 
 clear
 
-echo "$(tput setaf 2)Training model $nmt_model for a $train_steps step(s) just to get random weights for model$(tput setaf 7)"
+echo "$(tput setaf 2)Training model $nmt_model for $train_steps step(s) just to get random weights for model$(tput setaf 7)"
 echo " "
 echo " "
 
