@@ -74,7 +74,7 @@ else
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
-          --features_file data/toy-ende/src-test.txt
+          --features_file data/toy-ende/src-test.txt \
           2>&1 | tee ../bench_${title}_${nmt_model}_${today}.log
 
 fi
