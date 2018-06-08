@@ -1,5 +1,6 @@
 # Assuming you have created a virtual (conda) environment with TensorFlow
-if [ $1 ]; then   # If pass true then use optimizations 
+optimized=${1:-False}
+if [ $optimized ]; then   # If pass true then use optimizations 
     export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
     export num_cores=`grep -c ^processor /proc/cpuinfo` 
     echo "Using $num_cores cores"
@@ -14,7 +15,7 @@ batch_size=64   # Batch size for inference
 
 # There are several NMT models to choose:
 # --model_type {ListenAttendSpell,NMTBig,NMTMedium,NMTSmall,SeqTagger,Transformer,TransformerAAN,TransformerBig}
-nmt_model=NMTSmall 
+nmt_model=${2:-NMTSmall} 
 
 rm -rf OpenNMT-tf
 
@@ -61,7 +62,7 @@ sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/op
 today=`date +%Y-%m-%d-%H_%M_%S`
 
 # Perform inference on the standard testing German/English dataset
-if [ $1 ] ; then
+if [ $optimized ] ; then
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
