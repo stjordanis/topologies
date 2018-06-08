@@ -89,10 +89,6 @@ parser.add_argument("--mkl_verbose",
 					action="store_true",
 					default=False,
 					help="Print MKL debug statements.")
-parser.add_argument("--trace",
-					action="store_true",
-					default=False,
-					help="Create trace of TensorFlow timeline")
 parser.add_argument("--inference",
 					action="store_true",
 					default=False,
@@ -168,28 +164,16 @@ else:
 					   print_summary=args.print_model, n_out=args.num_outputs,
 					   return_model=True)
 
-if args.trace:
-	# Set up trace for operations
-	run_metadata = tf.RunMetadata()
-	run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-else:
-	run_metadata = None
-	run_options = None
-
 #  Performance metrics for model
 if args.single_class_output:
 	model.compile(loss="binary_crossentropy",
               optimizer="adam",
-              metrics=["accuracy"],
-			  options=run_options,
-              run_metadata=run_metadata)
+              metrics=["accuracy"])
 
 else:
 	model.compile(loss=dice_coef_loss,
               optimizer="adam",
-              metrics=[dice_coef, "accuracy"],
-			  options=run_options,
-              run_metadata=run_metadata)
+              metrics=[dice_coef, "accuracy"])
 
 
 def get_imgs():
@@ -242,22 +226,3 @@ print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
 print("Total images = {:,}".format(args.epochs*args.num_datapoints))
 print("Speed = {:,.3f} images per second".format( \
 			(args.epochs*args.num_datapoints)/(stop_time - start_time)))
-
-if args.trace:
-	"""
-	Save the training timeline
-	"""
-	from tensorflow.python.client import timeline
-
-	timeline_filename = "./timeline_trace.json"
-	fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-	chrome_trace = fetched_timeline.generate_chrome_trace_format()
-	with open(timeline_filename, "w") as f:
-		print("Saved Tensorflow trace to: {}".format(timeline_filename))
-		print("To view the trace:\n(1) Open Chrome browser.\n"
-		"(2) Go to this url -- chrome://tracing\n"
-		"(3) Click the load button.\n"
-		"(4) Load the file {}.".format(timeline_filename))
-		f.write(chrome_trace)
-
-print("Stopped script on {}".format(datetime.datetime.now()))
