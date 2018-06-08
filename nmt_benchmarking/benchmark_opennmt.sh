@@ -58,7 +58,7 @@ echo " "
 echo " "
 sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/opennmt-defaults.yml
 
-today=`date +%Y-%m-%d.%H:%M:%S`
+today=`date +%Y-%m-%d-%H_%M_%S`
 
 # Perform inference on the standard testing German/English dataset
 if [ $1 ] ; then
@@ -68,13 +68,13 @@ if [ $1 ] ; then
           --features_file data/toy-ende/src-test.txt \
 	  --intra_op_parallelism_threads=$num_cores \
 	  --inter_op_parallelism_threads=1 \
-	  2>&1 | tee bench_${title}_${nmt_model}_${today}.log 
+	  2>&1 | tee ../bench_${title}_${nmt_model}_${today}.log 
 else
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
           --features_file data/toy-ende/src-test.txt
-          2>&1 | tee bench_${title}_${nmt_model}_${today}.log
+          2>&1 | tee ../bench_${title}_${nmt_model}_${today}.log
 
 fi
 
