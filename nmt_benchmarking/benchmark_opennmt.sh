@@ -1,9 +1,13 @@
 # Assuming you have created a virtual (conda) environment with TensorFlow
-
-export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
-export num_cores=`grep -c ^processor /proc/cpuinfo`
-echo "Using $num_cores cores"
-export OMP_NUM_THREADS=$num_cores
+if [ $1 ]; then   # If pass true then use optimizations 
+    export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
+    export num_cores=`grep -c ^processor /proc/cpuinfo` 
+    echo "Using $num_cores cores"
+    export OMP_NUM_THREADS=$num_cores
+    export title="Optimized"
+else
+    export title="Non-optimized"
+fi
 
 train_steps=1   # Number of steps to train model
 batch_size=64   # Batch size for inference
@@ -49,18 +53,26 @@ onmt-main train_and_eval --model_type $nmt_model --config config/opennmt-default
 
 clear
 
-echo "$(tput setaf 2)Creating predictions for model $nmt_modelwith batch size of $batch_size$(tput setaf 7)"
+echo "$(tput setaf 2)Creating predictions for model $nmt_model with batch size of $batch_size - $title$(tput setaf 7)"
 echo " "
 echo " "
 sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/opennmt-defaults.yml
 
 # Perform inference on the standard testing German/English dataset
-onmt-main infer --log_prediction_time \
+if [ $1 ] ; then
+    onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
           --features_file data/toy-ende/src-test.txt \
 	  --intra_op_parallelism_threads=$num_cores \
 	  --inter_op_parallelism_threads=1
+else
+    onmt-main infer --log_prediction_time \
+          --config config/opennmt-defaults.yml \
+          config/data/toy-ende.yml \
+          --features_file data/toy-ende/src-test.txt
+
+fi
 
 echo " "
 echo "$(tput setaf 4)Finished inference script$(tput setaf 7)"
