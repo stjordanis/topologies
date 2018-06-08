@@ -1,5 +1,10 @@
 # Assuming you have created a virtual (conda) environment with TensorFlow
 
+export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
+export num_cores=`grep -c ^processor /proc/cpuinfo`
+echo "Using $num_cores cores"
+export OMP_NUM_THREADS=$num_cores
+
 train_steps=1   # Number of steps to train model
 batch_size=64   # Batch size for inference
 
@@ -16,8 +21,9 @@ echo " "
 # Clone the latest version of openNMT
 git clone https://github.com/OpenNMT/OpenNMT-tf.git
 cd OpenNMT-tf
-echo "Installing OpenNMT into python environment"
+
 pip install pyonmttok
+echo "Installing OpenNMT into python environment"
 python setup.py install
 
 clear
@@ -49,7 +55,12 @@ echo " "
 sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/opennmt-defaults.yml
 
 # Perform inference on the standard testing German/English dataset
-onmt-main infer --log_prediction_time --config config/opennmt-defaults.yml config/data/toy-ende.yml --features_file data/toy-ende/src-test.txt
+onmt-main infer --log_prediction_time \
+          --config config/opennmt-defaults.yml \
+          config/data/toy-ende.yml \
+          --features_file data/toy-ende/src-test.txt \
+	  --intra_op_parallelism_threads=$num_cores \
+	  --inter_op_parallelism_threads=1
 
 echo " "
 echo "$(tput setaf 4)Finished inference script$(tput setaf 7)"
