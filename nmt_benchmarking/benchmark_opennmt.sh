@@ -1,14 +1,5 @@
 # Assuming you have created a virtual (conda) environment with TensorFlow
 optimized=${1:-False}
-if [ $optimized -eq True ]; then   # If pass true then use optimizations 
-    export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
-    export num_cores=`grep -c ^processor /proc/cpuinfo` 
-    echo "Using $num_cores cores"
-    export OMP_NUM_THREADS=$num_cores
-    export title="Optimized"
-else
-    export title="Non-optimized"
-fi
 
 train_steps=1   # Number of steps to train model
 batch_size=64   # Batch size for inference
@@ -62,20 +53,26 @@ sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/op
 today=`date +%Y-%m-%d-%H_%M_%S`
 
 # Perform inference on the standard testing German/English dataset
-if [ $optimized -eq True ] ; then
+if [ $optimized == True ] ; then
+
+    export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
+    export num_cores=`grep -c ^processor /proc/cpuinfo`
+    echo "Using $num_cores cores"
+    export OMP_NUM_THREADS=$num_cores
+
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
           --features_file data/toy-ende/src-test.txt \
 	  --intra_op_parallelism_threads=$num_cores \
 	  --inter_op_parallelism_threads=1 \
-	  2>&1 | tee ../bench_${title}_${nmt_model}_${today}.log 
+	  2>&1 | tee ../bench_optimized_${nmt_model}_${today}.log 
 else
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
           --features_file data/toy-ende/src-test.txt \
-          2>&1 | tee ../bench_${title}_${nmt_model}_${today}.log
+          2>&1 | tee ../bench_No_optimized_${nmt_model}_${today}.log
 
 fi
 
