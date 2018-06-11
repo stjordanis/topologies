@@ -1,4 +1,8 @@
 # Assuming you have created a virtual (conda) environment with TensorFlow
+
+# Drop any cached runs
+sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'
+
 optimized=${1:-False}
 
 train_steps=1   # Number of steps to train model
@@ -68,17 +72,24 @@ if [ $optimized == True ] ; then
 	  --intra_op_parallelism_threads=$num_cores \
 	  --inter_op_parallelism_threads=1 \
 	  2>&1 | tee ../bench_optimized_${nmt_model}_${today}.log 
+
+    echo "OPTIMIZED"
+
 else
     echo "NOT OPTIMIZED"
+
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
           --features_file data/toy-ende/src-test.txt \
           2>&1 | tee ../bench_No_optimized_${nmt_model}_${today}.log
 
+    echo "NOT OPTIMIZED"
+
+
 fi
 
 echo " "
-echo "$(tput setaf 4)Finished inference script on model $nmt_model - $title$(tput setaf 7)"
+echo "$(tput setaf 4)Finished inference script on model $nmt_model(tput setaf 7)"
 
 
