@@ -45,7 +45,7 @@ onmt-main train_and_eval --model_type $nmt_model --config config/opennmt-default
 
 clear
 
-echo "$(tput setaf 2)Creating predictions for model $nmt_model with batch size of $batch_size - $title$(tput setaf 7)"
+echo "$(tput setaf 2)Creating predictions for model $nmt_model with batch size of $batch_size$(tput setaf 7)"
 echo " "
 echo " "
 sed -ri "s/^(\s*)(batch_size\s*:\s*30\s*$)/\1batch_size: $batch_size/" config/opennmt-defaults.yml
@@ -55,6 +55,7 @@ today=`date +%Y-%m-%d-%H_%M_%S`
 # Perform inference on the standard testing German/English dataset
 if [ $optimized == True ] ; then
 
+    echo "OPTIMIZED"
     export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
     export num_cores=`grep -c ^processor /proc/cpuinfo`
     echo "Using $num_cores cores"
@@ -68,6 +69,7 @@ if [ $optimized == True ] ; then
 	  --inter_op_parallelism_threads=1 \
 	  2>&1 | tee ../bench_optimized_${nmt_model}_${today}.log 
 else
+    echo "NOT OPTIMIZED"
     onmt-main infer --log_prediction_time \
           --config config/opennmt-defaults.yml \
           config/data/toy-ende.yml \
