@@ -28,7 +28,7 @@ for network in googlenet inception3 resnet50 resnet152 ; do
     --optimizer rmsprop --num_intra_threads $OMP_NUM_THREADS \
     --num_inter_threads $inter --num_omp_threads $OMP_NUM_THREADS \
     --num_batches 100 2>&1 | \
-    tee net_${network}_bz_${bz}_numcores_${OMP_NUM_THREADS}.log
+    tee net_${network}_bz_${bz}.log
 
     echo -e "#### Finished $network and BZ=$bz ####"
 
@@ -44,7 +44,7 @@ for network in googlenet inception3 resnet50 resnet152 ; do
         	--optimizer rmsprop --num_intra_threads $OMP_NUM_THREADS \
         	--num_inter_threads $inter --num_omp_threads $OMP_NUM_THREADS \
         	--num_batches 100 2>&1 | \
-        	tee net_${network}_bz_${bz}_numcores_${OMP_NUM_THREADS}.log
+        	tee net_${network}_bz_${bz}.log
 
         echo -e "#### Finished $network and BZ=$bz ####"
 
@@ -65,7 +65,7 @@ for network in vgg16 ; do
     --optimizer rmsprop --num_intra_threads $OMP_NUM_THREADS \
     --num_inter_threads $inter --num_omp_threads $OMP_NUM_THREADS \
     --num_batches 100 2>&1 | \
-    tee net_${network}_bz_${bz}_numcores_${OMP_NUM_THREADS}.log
+    tee net_${network}_bz_${bz}.log
 
     echo -e "#### Finished $network and BZ=$bz ####"
 
@@ -81,7 +81,7 @@ for network in vgg16 ; do
         --optimizer rmsprop --num_intra_threads $OMP_NUM_THREADS \
         --num_inter_threads $inter --num_omp_threads $OMP_NUM_THREADS \
         --num_batches 100 2>&1 | \
-        tee net_${network}_bz_${bz}_numcores_${OMP_NUM_THREADS}.log
+        tee net_${network}_bz_${bz}.log
 
         echo -e "#### Finished $network and BZ=$bz ####"
 
@@ -89,4 +89,14 @@ for network in vgg16 ; do
 done
 
 date > stop_benchmark.txt
+
+echo -e "\n Net BZ FPS \n"
+
+for network in googlenet inception3 resnet50 resnet152 vgg16 ; do
+  for bz in 1 32 64 96 128; do
+    fps=$(grep  "total images/sec:"  net_${network}_bz_${bz}.log | cut -d ":" -f2 | xargs)
+    echo "$network $bz $fps"
+  done
+    echo -e "\n"
+done
 
