@@ -1,6 +1,6 @@
 # UNet
 
-UNet architecture for Multimodal Brain Tumor Segmentation, built with TensorFlow 1.4.0 and optimized for multi-node execution on Intel KNL and Skylake servers.
+UNet architecture for Multimodal Brain Tumor Segmentation, built with TensorFlow and optimized for multi-node execution on Intel KNL and Skylake servers.
 
 ## Overview
 
