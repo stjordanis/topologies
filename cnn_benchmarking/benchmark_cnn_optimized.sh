@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# Runs the TF CNN Benchmarks using Intel optimizations
+
 git clone -b mkl_experiment https://github.com/tensorflow/benchmarks.git
    
 export KMP_AFFINITY=granularity=fine,compact,1,0
