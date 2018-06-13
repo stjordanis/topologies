@@ -20,4 +20,4 @@ done
 date > stop_benchmark.txt
 
 echo "No Intel optimizations"
-bash print.sh
+bash ../../../print_bench.sh
