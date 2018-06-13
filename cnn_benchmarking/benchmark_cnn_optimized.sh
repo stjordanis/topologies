@@ -92,4 +92,4 @@ done
 
 date > stop_benchmark.txt
 
-bash print.sh
+bash ../../../print_bench.sh
