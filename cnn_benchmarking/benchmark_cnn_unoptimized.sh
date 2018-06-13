@@ -3,6 +3,11 @@
 sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
 
 set -x
+
+git clone https://github.com/tensorflow/benchmarks.git
+   
+cd benchmarks/scripts/tf_cnn_benchmarks
+
 date > start_benchmark.txt
 
 for network in googlenet inception3 resnet50 resnet152 vgg16 ; do
