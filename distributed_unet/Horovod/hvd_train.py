@@ -33,12 +33,12 @@ parser.add_argument("--use_upsampling",
                     action="store_true", default=settings.USE_UPSAMPLING)
 parser.add_argument("--num_threads", type=int,
                     default=settings.NUM_INTRA_THREADS,
-                    help="the number of threads")
+                    help="the number of intraop threads")
 parser.add_argument(
     "--num_inter_threads",
     type=int,
     default=settings.NUM_INTER_THREADS,
-    help="the number of intraop threads")
+    help="the number of interop threads")
 parser.add_argument("--batch_size", type=int, default=settings.BATCH_SIZE,
                     help="the batch size for training")
 parser.add_argument(
@@ -425,7 +425,7 @@ if __name__ == "__main__":
     print("Started script on {}".format(datetime.datetime.now()))
 
     print("args = {}".format(args))
-    print("OS: ".format(os.system("uname -a")))
+    print("OS: {}".format(os.system("uname -a")))
     print("TensorFlow version: {}".format(tf.__version__))
     start_time = time.time()
 
