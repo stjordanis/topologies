@@ -8,7 +8,7 @@ export num_workers_per_node=${3:-4}  # Default 4 workers per node
 export num_inter_threads=${4:-2} # Default to 2 inter_op threads
 
 export physical_cores=`lscpu | grep "Core(s) per socket" | cut -d':' -f2 | sed "s/ //g"` # Total number of physical cores per socket
-export num_nodes=`cat hosts.txt | sed '/^\s*$/d' | wc -l` # Hosts.txt should contain a single host per line
+export num_nodes=`cat ${node_ips} | sed '/^\s*$/d' | wc -l` # Hosts.txt should contain a single host per line
 export num_processes=$(( $num_nodes * $num_workers_per_node )) # Total number of workers across all nodes
 export ppr=2   # Number of sockets per node
 
