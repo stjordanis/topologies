@@ -1,3 +1,5 @@
+logdir=${1:-_multiworker}
+
 bash synch_servers.sh
 
 export num_nodes=`wc -l < hosts.txt`
@@ -11,4 +13,4 @@ export num_threads=$(( $ppr * $physical_cores ))
 mpirun -np $num_processes --hostfile hosts.txt -bind-to none \
         --map-by ppr:$ppr:socket:pe=$pe \
 	--report-bindings --oversubscribe \
-        bash hvd_multiworker.sh _multiworker $ppr $num_threads
+        bash hvd_multiworker.sh $logdir $ppr $num_threads
