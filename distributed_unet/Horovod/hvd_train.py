@@ -369,7 +369,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
         history = model.fit_generator(train_generator,
                             steps_per_epoch=len(imgs_train)//batch_size//hvd.size(),
                             epochs=n_epoch,
-                            callbacks=[model_checkpoint, tensorboard_checkpoint])
+                            callbacks=[model_checkpoint])
 
     if args.trace:
         """
