@@ -406,29 +406,29 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
                "dice_coef_loss": dice_coef_loss,
                "dice_coef": dice_coef})
 
-      print("-" * 30)
-      print("Predicting masks on test data...")
-      print("-" * 30)
-      msks_pred = model.predict(imgs_test, verbose=1)
+       print("-" * 30)
+       print("Predicting masks on test data...")
+       print("-" * 30)
+       msks_pred = model.predict(imgs_test, verbose=1)
 
-      print("Saving predictions to file")
-      if (args.use_upsampling):
-          np.save("msks_pred_upsampling.npy", msks_pred)
-      else:
-          np.save("msks_pred_transposed.npy", msks_pred)
+       print("Saving predictions to file")
+       if (args.use_upsampling):
+           np.save("msks_pred_upsampling.npy", msks_pred)
+       else:
+           np.save("msks_pred_transposed.npy", msks_pred)
 
-      start_inference = time.time()
-      print("Evaluating model")
-      scores = model.evaluate(
-          imgs_test,
-          msks_test,
-          batch_size=batch_size,
-          verbose=2)
+       start_inference = time.time()
+       print("Evaluating model")
+       scores = model.evaluate(
+           imgs_test,
+           msks_test,
+           batch_size=batch_size,
+           verbose=2)
 
-      elapsed_time = time.time() - start_inference
-      print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
-          imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
-      print("Evaluation Scores", scores)
+       elapsed_time = time.time() - start_inference
+       print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
+           imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
+       print("Evaluation Scores", scores)
 
 
 if __name__ == "__main__":
