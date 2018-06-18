@@ -18,11 +18,6 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-import horovod.keras as hvd
-# Horovod: initialize Horovod.
-hvd.init()
-workers=hvd.size()
-
 # import model as mdl
 import psutil
 import settings    # Use the custom settings.py file for default parameters
@@ -264,8 +259,8 @@ def unet_model(img_height=224,
 
     model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
-    optimizer = K.optimizers.Adam(lr=args.learningrate*hvd.size())
-    optimizer = hvd.DistributedOptimizer(optimizer)
+    optimizer = K.optimizers.Adam(lr=args.learningrate)
+
     if args.trace:
         model.compile(optimizer=optimizer,
                       loss=dice_coef_loss,
@@ -353,34 +348,17 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
     train_generator = get_batch(imgs_train, msks_train, batch_size)
 
-    callbacks = [
-    	# Horovod: broadcast initial variable states from rank 0 to all other processes.
-    	# This is necessary to ensure consistent initialization of all workers when
-    	# training is started with random weights or restored from a checkpoint.
-    	hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+    callbacks = []
+    
 
-    	# Horovod: average metrics among workers at the end of every epoch.
-    	#
-    	# Note: This callback must be in the list before the ReduceLROnPlateau,
-    	# TensorBoard or other metrics-based callbacks.
-    	hvd.callbacks.MetricAverageCallback(),
-
-    	# Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
-    	# accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
-    	# the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    	hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=n_epoch//5, verbose=1) ]
-	
-    if hvd.rank() == 0:
-
-        callbacks.append(model_checkpoint)
-	callbacks.append(tensorboard_checkpoint)
-
+    callbacks.append(model_checkpoint)
+    callbacks.append(tensorboard_checkpoint)
 
     history = model.fit_generator(train_generator,
-                            steps_per_epoch=len(imgs_train)//batch_size//hvd.size(),
-                            epochs=n_epoch,
-                            validation_data = (imgs_test, msks_test),
-                            callbacks=callbacks)
+                                  steps_per_epoch=len(imgs_train)//batch_size,
+                                  epochs=n_epoch,
+                                  validation_data = (imgs_test, msks_test),
+                                  callbacks=callbacks)
 
     if args.trace:
         """
