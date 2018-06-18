@@ -31,6 +31,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--use_upsampling",
                     help="use upsampling instead of transposed convolution",
                     action="store_true", default=settings.USE_UPSAMPLING)
+parser.add_argument("--num_warmups", type=int, default=2, 
+                    help="Number of warmup epochs for Horovod")
 parser.add_argument("--num_threads", type=int,
                     default=settings.NUM_INTRA_THREADS,
                     help="the number of intraop threads")
@@ -368,7 +370,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     	# Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
     	# accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
     	# the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    	hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=n_epoch//5, verbose=1) ]
+    	hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
 	
     if hvd.rank() == 0:
 
@@ -382,49 +384,51 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
                             validation_data = (imgs_test, msks_test),
                             callbacks=callbacks)
 
-    if args.trace:
-        """
-        Save the training timeline
-        """
-        from tensorflow.python.client import timeline
+    if hvd_rank() == 0:
 
-        fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-        chrome_trace = fetched_timeline.generate_chrome_trace_format()
-        with open(timeline_filename, "w") as f:
-            print("Saved Tensorflow trace to: {}".format(timeline_filename))
-            f.write(chrome_trace)
+       if args.trace:
+          """
+          Save the training timeline
+          """
+          from tensorflow.python.client import timeline
 
-    print("-" * 30)
-    print("Loading the best trained model ...")
-    print("-" * 30)
-    model = K.models.load_model(
-        model_fn, custom_objects={
-            "dice_coef_loss": dice_coef_loss,
-            "dice_coef": dice_coef})
+          fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+          chrome_trace = fetched_timeline.generate_chrome_trace_format()
+          with open(timeline_filename, "w") as f:
+              print("Saved Tensorflow trace to: {}".format(timeline_filename))
+              f.write(chrome_trace)
 
-    print("-" * 30)
-    print("Predicting masks on test data...")
-    print("-" * 30)
-    msks_pred = model.predict(imgs_test, verbose=1)
+       print("-" * 30)
+       print("Loading the best trained model ...")
+       print("-" * 30)
+       model = K.models.load_model(
+           model_fn, custom_objects={
+               "dice_coef_loss": dice_coef_loss,
+               "dice_coef": dice_coef})
 
-    print("Saving predictions to file")
-    if (args.use_upsampling):
-        np.save("msks_pred_upsampling.npy", msks_pred)
-    else:
-        np.save("msks_pred_transposed.npy", msks_pred)
+      print("-" * 30)
+      print("Predicting masks on test data...")
+      print("-" * 30)
+      msks_pred = model.predict(imgs_test, verbose=1)
 
-    start_inference = time.time()
-    print("Evaluating model")
-    scores = model.evaluate(
-        imgs_test,
-        msks_test,
-        batch_size=batch_size,
-        verbose=2)
+      print("Saving predictions to file")
+      if (args.use_upsampling):
+          np.save("msks_pred_upsampling.npy", msks_pred)
+      else:
+          np.save("msks_pred_transposed.npy", msks_pred)
 
-    elapsed_time = time.time() - start_inference
-    print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
-        imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
-    print("Evaluation Scores", scores)
+      start_inference = time.time()
+      print("Evaluating model")
+      scores = model.evaluate(
+          imgs_test,
+          msks_test,
+          batch_size=batch_size,
+          verbose=2)
+
+      elapsed_time = time.time() - start_inference
+      print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
+          imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
+      print("Evaluation Scores", scores)
 
 
 if __name__ == "__main__":
