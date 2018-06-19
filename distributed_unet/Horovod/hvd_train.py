@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--use_upsampling",
                     help="use upsampling instead of transposed convolution",
                     action="store_true", default=settings.USE_UPSAMPLING)
-parser.add_argument("--num_warmups", type=int, default=2, 
+parser.add_argument("--num_warmups", type=int, default=1, 
                     help="Number of warmup epochs for Horovod")
 parser.add_argument("--num_threads", type=int,
                     default=settings.NUM_INTRA_THREADS,
