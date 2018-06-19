@@ -164,6 +164,11 @@ else:
 					   print_summary=args.print_model, n_out=args.num_outputs,
 					   return_model=True)
 
+# Freeze layers
+if args.inference:
+   for layer in model.layers:
+       layer.trainable = False
+
 #  Performance metrics for model
 if args.single_class_output:
 	model.compile(loss="binary_crossentropy",
@@ -214,8 +219,7 @@ else:
 
 start_time = time.time()
 if args.inference:
-	model.predict_generator(get_imgs(),
-							steps=total_steps, verbose=1)
+	model.predict_generator(get_imgs(), steps=total_steps, verbose=1)
 else:
 	model.fit_generator(get_batch(), steps_per_epoch=total_steps,
 					    epochs=args.epochs, verbose=1)
