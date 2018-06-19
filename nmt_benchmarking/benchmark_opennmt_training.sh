@@ -5,12 +5,14 @@ sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'
 
 optimized=${1:-True}
 
-train_steps=100   # Number of steps to train model
+train_steps=500   # Number of steps to train model
 batch_size=64   # Batch size for inference
 
 # There are several NMT models to choose:
 # --model_type {ListenAttendSpell,NMTBig,NMTMedium,NMTSmall,SeqTagger,Transformer,TransformerAAN,TransformerBig}
 nmt_model=${2:-Transformer} 
+
+inter_op=2  # Number of inter op parallelism threads
 
 rm -rf OpenNMT-tf
 
@@ -74,7 +76,14 @@ else
 
 fi
 
+onmt-main infer --log_prediction_time \
+          --config config/opennmt-defaults.yml \
+          config/data/toy-ende.yml \
+          --features_file data/toy-ende/src-test.txt \
+	  --intra_op_parallelism_threads=$num_cores \
+	  --inter_op_parallelism_threads=$inter_op
+
 echo " "
-echo "$(tput setaf 4)Finished inference script on model $nmt_model(tput setaf 7)"
+echo "$(tput setaf 4)Finished inference script on model $nmt_model$(tput setaf 7)"
 
 
