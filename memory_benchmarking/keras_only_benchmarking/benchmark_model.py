@@ -139,6 +139,10 @@ config = tf.ConfigProto(
 		inter_op_parallelism_threads=args.interop_threads,
 		intra_op_parallelism_threads=args.intraop_threads)
 
+# Configure only as much GPU memory as needed during runtime
+# Default is to use the entire GPU memory
+config.gpu_options.allow_growth = True
+
 sess = tf.Session(config=config)
 K.backend.set_session(sess)
 
