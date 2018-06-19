@@ -3,14 +3,14 @@
 pip install memory_profiler
 rm mprofile*.dat
 
-for dim_length in 32 56 64 80 128 184 256 320 400 512 584
+for dim_length in 32 56 64 80 128 184 200 256
 do
 
-   if [ $dim_length -gt 256 ]; then
-      num=4
-   elif [ $dim_length -gt 100 ]; then
+   if [ $dim_length -ge 200 ]; then
+      num=2
+   elif [ $dim_length -ge 100 ]; then
       num=12
-   elif [ $dim_length -gt 50 ]; then
+   elif [ $dim_length -ge 50 ]; then
       num=200
    else
       num=300
@@ -22,8 +22,8 @@ do
    mv mprofile*.dat unet3d_train_len${dim_length}_bz1.dat
 
    sleep 10
-   sudo sync; echo 3 > /proc/sys/vm/drop_caches
-   sleep 60
+   sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+   sleep 50
 
    # Training batch size 2
    mprof run benchmark_model.py --dim_length $dim_length --num_datapoints $num --epochs 1 --bz 2 \
