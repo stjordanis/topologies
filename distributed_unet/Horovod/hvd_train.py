@@ -384,7 +384,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
                             validation_data = (imgs_test, msks_test),
                             callbacks=callbacks)
 
-    if hvd_rank() == 0:
+    if hvd.rank() == 0:
 
        if args.trace:
           """
