@@ -4,9 +4,9 @@ pip install memory_profiler
 rm *.dat 
 rm *.log
 
-using_gpu=${1:-False}
+using_gpu=${1:-True}
 
-for dim_length in 32 # 56 64 80 128 184 200 256
+for dim_length in 32 56 64 80 128 184 200 256
 do
 
    num=1000000  # Run for a long time because timeout will automatically stop the script after a certain number of seconds
