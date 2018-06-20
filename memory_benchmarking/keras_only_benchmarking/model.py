@@ -18,6 +18,7 @@
 import os.path
 import numpy as np
 import tensorflow as tf
+#from tensorflow import keras as K
 import keras as K
 
 def dice_coef(target, prediction, axis=(1, 2, 3), smooth=1e-5):
@@ -148,7 +149,7 @@ def unet3D(input_img, use_upsampling=False, n_out=1, dropout=0.2,
 	conv7 = K.layers.Activation("relu")(conv7)
 	pred = K.layers.Conv3D(name="Prediction", filters=n_out, kernel_size=(1, 1, 1),
 					data_format=data_format, activation="sigmoid")(conv7)
-
+        
 	if return_model:
 		model = K.models.Model(inputs=[inputs], outputs=[pred])
 

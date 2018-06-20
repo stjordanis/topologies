@@ -1,47 +1,67 @@
 #!/bin/bash
 
 pip install memory_profiler
-rm mprofile*.dat
+rm *.dat 
+rm *.log
 
-for dim_length in 32 56 64 80 128 184 200 256
+using_gpu=${1:-True}
+
+for dim_length in 32 # 56 64 80 128 184 200 256
 do
 
-   if [ $dim_length -ge 200 ]; then
-      num=2
-   elif [ $dim_length -ge 100 ]; then
-      num=12
-   elif [ $dim_length -ge 50 ]; then
-      num=200
-   else
-      num=300
-   fi
+   num=1000000  # Run for a long time because timeout will automatically stop the script after a certain number of seconds
+   secs=600  # Number of seconds to record memory
 
    # Training batch size 1
-   mprof run benchmark_model.py --dim_length $dim_length --num_datapoints $num --epochs 1 --bz 1 \
-         2>&1 | tee train_unet_${dim_length}_bz1.log
-   mv mprofile*.dat unet3d_train_len${dim_length}_bz1.dat
+   if [ $using_gpu == True ]; then
+   	timeout 5 bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz1_train.log
+   fi
+   timeout $secs mprof run benchmark_model.py --dim_length $dim_length --num_datapoints 5 --epochs $num --bz 1 \
+         2>&1 | tee train_unet_${dim_length}_bz1.log &
 
-   sleep 10
-   sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
-   sleep 50
+   if [ $using_gpu == True ]; then
+   	timeout $secs bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz1_train.log
+   fi
+
+   pattern="mprofile_*.dat"
+   files=( $pattern )
+   mv ${files[0]}  unet3d_train_len${dim_length}_bz1.dat
+ 
+   bash clear_caches.sh
 
    # Training batch size 2
-   mprof run benchmark_model.py --dim_length $dim_length --num_datapoints $num --epochs 1 --bz 2 \
-         2>&1 | tee train_unet_${dim_length}_bz2.log
-   mv mprofile*.dat unet3d_train_len${dim_length}_bz2.dat
+   if [ $using_gpu == True ]; then
+   	timeout 5 bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz2_train.log
+   fi
+   timeout $secs mprof run  benchmark_model.py --dim_length $dim_length --num_datapoints 5 --epochs $num --bz 2 \
+         2>&1 | tee train_unet_${dim_length}_bz2.log &
 
-   sleep 10
-   sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
-   sleep 50
+   if [ $using_gpu == True ]; then
+   	timeout $secs bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz2_train.log
+   fi
+
+   pattern="mprofile_*.dat"
+   files=( $pattern )
+   mv ${files[0]} unet3d_train_len${dim_length}_bz2.dat
+
+   bash clear_caches.sh
 
    # Inference batch size 1
-   mprof run benchmark_model.py --dim_length $dim_length --inference --num_datapoints $num --epochs 1 --bz 1 \
-         2>&1 | tee inference_unet_${dim_length}_bz1.log
-   mv mprofile*.dat unet3d_inference_len${dim_length}_bz1.dat
+   if [ $using_gpu == True ]; then
+   	timeout 5 bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz1_inference.log
+   fi
+   timeout $secs mprof run benchmark_model.py --dim_length $dim_length --inference --num_datapoints 5 --epochs $num --bz 1 \
+         2>&1 | tee inference_unet_${dim_length}_bz1.log &
 
-   sleep 10
-   sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
-   sleep 50
+   if [ $using_gpu == True ]; then
+   	timeout $secs bash check_gpu_memory.sh > gpu_memory_${dim_length}_bz1_inference.log
+   fi
+
+   pattern="mprofile_*.dat"
+   files=( $pattern )
+   mv ${files[0]} unet3d_inference_len${dim_length}_bz1.dat
+
+   bash clear_caches.sh
 
 done
 

@@ -111,9 +111,28 @@ print("args = {}".format(args))
 print("OS: {}".format(os.system("uname -a")))
 print("TensorFlow version: {}".format(tf.__version__))
 
+#from tensorflow import keras as K
 import keras as K
 
 print("Keras API version: {}".format(K.__version__))
+
+def get_model_memory_usage(batch_size, model):
+
+    shapes_mem_count = 0
+    for l in model.layers:
+        single_layer_mem = 1
+        for s in l.output_shape:
+            if s is None:
+                continue
+            single_layer_mem *= s
+        shapes_mem_count += single_layer_mem
+
+    trainable_count = np.sum([K.backend.count_params(p) for p in set(model.trainable_weights)])
+    non_trainable_count = np.sum([K.backend.count_params(p) for p in set(model.non_trainable_weights)])
+
+    total_memory = 4.0*batch_size*(shapes_mem_count + trainable_count + non_trainable_count)
+    gbytes = np.round(total_memory / (1024.0 ** 3), 3)
+    return gbytes
 
 if args.D2:  # Define shape of the tensors (2D)
 	dims = (1,2)
@@ -144,6 +163,7 @@ config = tf.ConfigProto(
 config.gpu_options.allow_growth = True
 
 sess = tf.Session(config=config)
+
 K.backend.set_session(sess)
 
 if args.single_class_output:
@@ -220,12 +240,14 @@ if args.inference:
 else:
 	print("Testing training speed.")
 
+print("Estimated memory for model = {} GB".format(get_model_memory_usage(args.bz, model)))
 
 start_time = time.time()
 if args.inference:
-	model.predict_generator(get_imgs(), steps=total_steps, verbose=1)
+   for _ in range(args.epochs):
+       model.predict_generator(get_imgs(), steps=total_steps, verbose=1)
 else:
-	model.fit_generator(get_batch(), steps_per_epoch=total_steps,
+  	model.fit_generator(get_batch(), steps_per_epoch=total_steps,
 					    epochs=args.epochs, verbose=1)
 
 stop_time = time.time()
