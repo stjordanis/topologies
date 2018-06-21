@@ -370,9 +370,9 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     	# Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
     	# accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
     	# the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    	hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
+    	] #hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
 	
-    if hvd.rank() == 0:
+    if (hvd.rank() == 0) and (hvd.local_rank() == 0):
 
         callbacks.append(model_checkpoint)
 	callbacks.append(tensorboard_checkpoint)
@@ -384,7 +384,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
                             validation_data = (imgs_test, msks_test),
                             callbacks=callbacks)
 
-    if hvd.rank() == 0:
+    if (hvd.rank() == 0) and (hvd.local_rank() == 0):
 
        if args.trace:
           """
