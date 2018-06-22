@@ -19,9 +19,9 @@
 #
 from multiprocessing import cpu_count
 
-BASE = "/home/bduser/unet/data/"
-DATA_PATH = BASE+"/slices"
-OUT_PATH  = BASE+"slices/Results/"
+BASE = "/home/genodeuser1/data/"
+DATA_PATH = BASE
+OUT_PATH  = BASE
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
 
@@ -46,13 +46,13 @@ USE_UPSAMPLING = False  # True = Use upsampling; False = Use transposed convolut
 MODE=1
 
 # Important that these are ordered correctly: [0] = chief node, [1] = worker node, etc.
-PS_HOSTS = ["10.100.70.132"]
+PS_HOSTS = ["10.30.0.151"]
 PS_PORTS = ["2222"]
-WORKER_HOSTS = ["10.100.70.130","10.100.70.129","10.100.70.131"]
+WORKER_HOSTS = ["10.30.0.152","10.30.0.153","10.30.0.154"]
 WORKER_PORTS = ["2222", "2222", "2222", "2222"]
 
-CHECKPOINT_DIRECTORY = "checkpoints/unet"
-SAVED_MODEL_DIRECTORY = "saved_models/unet"
+CHECKPOINT_DIRECTORY = "/nfsshare/checkpoints/unet"
+SAVED_MODEL_DIRECTORY = "/nfsshare/saved_models/unet"
 TENSORBOARD_IMAGES = 3  # How many images to display on TensorBoard
 LOG_SUMMARY_STEPS = 3 # Log summaries after these many steps
 
