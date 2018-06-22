@@ -1,10 +1,27 @@
 # UNet with Horovod (README under construction)
 
-## Overview
+UNet architecture for Multimodal Brain Tumor Segmentation, built with TensorFlow and optimized for multi-node execution on Intel Skylake servers.
 
 ## Setup
 
-## Required Data
+Horovod requires MPI to be installed globally on all nodes. Install it by running `./install_mpi.sh` on each node.
+
+Use conda to setup a virtual environment called 'tf' on all the nodes:
+```
+conda config --add channels intel
+conda create -n tf -c intel python=2 pip numpy
+```
+Use `source activate tf` to enter the virtual environment, and install the following packages, beginning with `conda install -c anaconda tensorflow-mkl` to install the latest release of Intel Optimized TensorFlow with MKL-DNN. Additional packages can be installed using pip:
+```
+cython
+horovod
+SimpleITK
+opencv-python
+h5py
+tqdm
+```
+
+## Required data
 
 Data files are not included in this public repo but can accessed by registering (using your institutional email address) at the following link: http://braintumorsegmentation.org/. Once access has been granted, you may download the raw data. To convert those datasets into numpy arrays having shape [num_images, x_dimension (128), y_dimension (128), num_channels] run `python converter.py` after changing its root_dir variable to point to the location your MICCAI_BraTS... folder (processing will take a few minutes). Once complete, the following four files will be saved in the directory specified by the OUT_PATH variable in `settings.py`.
 
@@ -17,7 +34,7 @@ Data files are not included in this public repo but can accessed by registering 
 
 Copy these files to that same directory on all nodes.
 
-## Modifications to settings file
+## Customization
 
 Once environments are constructed which meets the above requirements, clone this repo anywhere on the master node.
 
@@ -25,17 +42,35 @@ Within the cloned directory, open `hosts.txt` and replace the current addresses 
 
 Depending on your hardware, you may need to modify the NUM_INTRA_THREADS value. This code was developed on Intel KNL and SKL servers having 68 and 56 cores each, so intra-op thread values of 57 and 50 were most ideal. Please note that maxing out the NUM_INTRA_THREADS value may result in segmentation faults or other memory issues. It is recommended to turn off hyper-threading to prevent resource exhaustion.
 
-Note that a natural consequence of synchronizing updates across several workers is a proportional decrease in the number of weight updates per epoch and slower convergence. To combat this slowdown and reduce the training time in multi-node execution, we default to a large initial learning rate which decays as the model trains. This learning rate is also contained in `settings.py`.
+Note that a natural consequence of synchronizing updates across several workers is a proportional decrease in the number of weight updates per epoch and slower convergence. To combat this slowdown and reduce the training time in multi-node execution, we use a warm-up strategy at the outset of training. The initial learning rate is defined in `settings.py`.
 
 ## Multi-Node Execution
 
-## Inference
+Training is initiated with the `./run_multiworker_hvd.sh` command which:
 
-## Sample Generation/Validation
+```
+1. Defines logdir, node_ips, num_workers_per_node, and num_inter_threads variables for passing to the execute script
+2. Pulls hardware information and calculates values for ppr (processes per resource) and total num_processes 
+3. Synchronizes the existing working directory with the corresponding directories on all other worker nodes
+4. Sends the MPI command to initiate training on all the nodes via exec_multiworker.sh
+```
+Optionally, `run_multiworker_hvd.sh` can be passed the following arguments which will override the defaults `<logidr> <hosts_file> <workers_per_node> <inter_op_threads>`.
+
+The `exec_multiworker.sh` script then executes the following on each node:
+
+```
+1. Activates the tf virtual environment
+2. Queries the core count and calculates the number of threads to pass to the TensorFlow script
+3. Executes hvd_train.py
+```
+
+`hvd_train.py` references `settings.py` for its default learning rate and inter_op threads. 
+
+When training completes, logs will be saved in the directory defined by the `logidir` argument passed into the `./run_multiworker_hvd.sh` script. If no `logidir` was specified, it will default to `tensorboard_multiworker`.
 
 ## Citations
 
-Whenever using and/or refering to the BraTS datasets in your publications, please make sure to cite the following papers.
+Cite the following papers whenever using and/or refering to the BraTS datasets in your publications:
 
 1. https://www.ncbi.nlm.nih.gov/pubmed/25494501
 2. https://www.ncbi.nlm.nih.gov/pubmed/28872634
