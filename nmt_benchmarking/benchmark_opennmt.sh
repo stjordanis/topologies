@@ -4,6 +4,15 @@
 sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'
 
 optimized=${1:-False}
+if [ $optimized == True ]; then   # If pass true then use optimizations 
+    export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
+    export num_cores=`grep -c ^processor /proc/cpuinfo` 
+    echo "Using $num_cores cores"
+    export OMP_NUM_THREADS=$num_cores
+    export title="Optimized"
+else
+    export title="Non-optimized"
+fi
 
 train_steps=1   # Number of steps to train model
 batch_size=64   # Batch size for inference
