@@ -266,7 +266,7 @@ def unet_model(img_height=224,
 
     model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
-    optimizer = K.optimizers.Adam(lr=args.learningrate*hvd.size())
+    optimizer = K.optimizers.Adam(lr=args.learningrate)
     optimizer = hvd.DistributedOptimizer(optimizer)
     if args.trace:
         model.compile(optimizer=optimizer,
@@ -379,7 +379,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
 
     history = model.fit_generator(train_generator,
-                            steps_per_epoch=len(imgs_train)//batch_size//hvd.size(),
+                            steps_per_epoch=len(imgs_train)//batch_size, #//hvd.size(),
                             epochs=n_epoch,
                             validation_data = (imgs_test, msks_test),
                             callbacks=callbacks)
