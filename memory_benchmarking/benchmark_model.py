@@ -221,8 +221,13 @@ else:
 # Initialize all variables
 init_op = tf.global_variables_initializer()
 init_l = tf.local_variables_initializer() # For TensorFlow metrics
+
 sess.run(init_op)
 sess.run(init_l)
+
+saver = tf.train.Saver()
+save_path = saver.save(sess, "./saved_model/model.ckpt")
+print("Model saved in path: %s" % save_path)
 
 # Freeze graph if inference
 if args.inference:

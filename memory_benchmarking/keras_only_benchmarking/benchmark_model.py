@@ -24,6 +24,10 @@ import datetime
 import tensorflow as tf
 from model import *
 
+from tensorflow.python.saved_model import builder as saved_model_builder
+from tensorflow.python.saved_model.signature_def_utils import predict_signature_def
+from tensorflow.python.saved_model import tag_constants
+
 parser = argparse.ArgumentParser(
 	description="Benchmark 3D and 2D Convolution Models",add_help=True)
 parser.add_argument("--dim_length",
@@ -249,6 +253,31 @@ if args.inference:
 else:
   	model.fit_generator(get_batch(), steps_per_epoch=total_steps,
 					    epochs=args.epochs, verbose=1)
+
+if args.inference:
+   import shutil
+   dirName = "./tensorflow_serving_model"
+   if args.single_class_output:
+      dirName += "_VGG16"
+   else:
+      dirName += "_UNET"
+   if args.D2:
+      dirName += "_2D"
+   else:
+      dirName += "_3D"
+
+   shutil.rmtree(dirName, ignore_errors=True)
+   # Save TensorFlow serving model
+   builder = saved_model_builder.SavedModelBuilder(dirName)
+   # Create prediction signature to be used by TensorFlow Serving Predict API
+   signature = predict_signature_def(inputs={"images": model.input},
+                                      outputs={"scores": model.output})
+   # Save the meta graph and the variables
+   builder.add_meta_graph_and_variables(sess=K.backend.get_session(), tags=[tag_constants.SERVING],
+                                        signature_def_map={"predict": signature})
+
+   builder.save()
+   print("Saved TensorFlow Serving model to: {}".format(dirName))
 
 stop_time = time.time()
 

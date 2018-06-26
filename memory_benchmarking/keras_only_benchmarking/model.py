@@ -200,7 +200,7 @@ def unet2D(input_tensor, use_upsampling=False,
 		conv5 = K.layers.Conv2D(name="conv5b", filters=256, **params)(conv5)
 		up6 = K.layers.concatenate([K.layers.UpSampling2D(name="up6", size=(2, 2))(conv5), conv4], axis=concat_axis)
 	else:
-		conv5 = K.layers.Conv2D(name="conv5b", filters=512, **params)(conv5)
+		conv5 = K.layers.Conv2D(name="conv5b", filters=256, **params)(conv5)
 		up6 = K.layers.concatenate([K.layers.Conv2DTranspose(name="transConv6", filters=256, data_format=data_format,
 						   kernel_size=(2, 2), strides=(2, 2), padding="same")(conv5), conv4], axis=concat_axis)
 
