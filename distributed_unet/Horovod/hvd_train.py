@@ -433,14 +433,13 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
 if __name__ == "__main__":
 
-    import commands
-    print ("{}".format(commands.getstatusoutput("lscpu")[1]))
+    print (format(os.system("lscpu")))
 
     import datetime
     print("Started script on {}".format(datetime.datetime.now()))
 
     print("args = {}".format(args))
-    print("OS: {}".format(os.system("uname -a")))
+    print(format(os.system("uname -a")))
     print("TensorFlow version: {}".format(tf.__version__))
     start_time = time.time()
 
