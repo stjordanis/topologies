@@ -61,8 +61,8 @@ LOG_SUMMARY_STEPS = 3 # Log summaries after these many steps
 # Start your Tensorflow virtual environment and run `tensorboard --logdir=checkpoints`
 # where checkpoints is whatever directory holds your log files.
 # On your local machine (the one where you can run Chrome web browser), run
-# the command: `ssh -f bduser@10.54.68.193 -L 6006:localhost:6006 -N`
-# where the `bduser@10.54.68.193` is replaced with the username and IP of the chief worker.
+# the command: `ssh -f user1@123.45.67.890 -L 6006:localhost:6006 -N`
+# where the `user1@123.45.67.890` is replaced with the username and IP of the chief worker.
 # Then on the local machine start Chrome webbrowser and go to url  http://localhost:6006
 
 # RegEx to exclude plots that match "test", "step", and "complete":  ^((?!test)(?!step)(?!complete).)*$
