@@ -19,7 +19,7 @@
 #
 from multiprocessing import cpu_count
 
-BASE = "/home/genodeuser1/data/"
+BASE = "/home/dir1/data/"
 DATA_PATH = BASE
 OUT_PATH  = BASE
 IMG_HEIGHT = 128
