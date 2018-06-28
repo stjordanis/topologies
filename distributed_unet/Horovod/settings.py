@@ -20,7 +20,7 @@
 
 import os
 
-BASE = "/home/genodeuser1/"
+BASE = "/home/dir1/"
 OUT_PATH  = os.path.join(BASE, "data/")
 
 IMG_HEIGHT = 128
