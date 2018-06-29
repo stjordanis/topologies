@@ -1,6 +1,6 @@
-# UNet with Horovod (README under construction)
+UNet with Horovod
 
-UNet architecture for Multimodal Brain Tumor Segmentation, built with TensorFlow and optimized for multi-node execution on Intel Skylake servers.
+This repository contains code for multimodal brain tumor segmentation with U-Net. Horovod is used to initiate any combination of single/multiple worker training runs on one or more nodes. 
 
 ## Setup
 
