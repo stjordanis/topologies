@@ -1,6 +1,6 @@
 UNet with Horovod
 
-This repository contains code for multimodal brain tumor segmentation with U-Net. Horovod is used to initiate any combination of single/multiple worker training runs on one or more nodes. 
+This repository contains code for multimodal brain tumor segmentation with U-Net. Horovod is used to initiate any combination of single/multiple worker training runs on one or more nodes.  
 
 ## Setup
 
