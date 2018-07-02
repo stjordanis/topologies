@@ -1,6 +1,6 @@
 # UNet with Horovod
 
-This repository contains code for multimodal brain tumor segmentation with U-Net. Horovod is used to initiate any combination of single/multiple worker training runs on one or more nodes.  
+This repository contains code for multimodal brain tumor segmentation with U-Net. Horovod is utilized to specify the number of workers per node and coordinate single or multi-node training.  
 
 ## Setup
 
@@ -36,11 +36,11 @@ Copy these files to that same directory on all nodes.
 
 ## Customization
 
-Once environments are constructed which meets the above requirements, clone this repo anywhere on the master node.
+Once environments are constructed which meets the above requirements, clone this repo anywhere on the chief node.
 
 Within the cloned directory, open `hosts.txt` and replace the current addresses with the appropriate addresses for your cluster.
 
-Depending on your hardware, you may need to modify the NUM_INTRA_THREADS value. This code was developed on Intel KNL and SKL servers having 68 and 56 cores each, so intra-op thread values of 57 and 50 were most ideal. Please note that maxing out the NUM_INTRA_THREADS value may result in segmentation faults or other memory issues. It is recommended to turn off hyper-threading to prevent resource exhaustion.
+Depending on your hardware, you may need to modify the NUM_INTRA_THREADS value. Set NUM_INTRA_THREADS to the number of physical cores available to the process, and NUM_INTER_THREADS threads to the number of disjoint branches in the computation graph (usually in the single digits).
 
 Note that a natural consequence of synchronizing updates across several workers is a proportional decrease in the number of weight updates per epoch and slower convergence. To combat this slowdown and reduce the training time in multi-node execution, we use a warm-up strategy at the outset of training. The initial learning rate is defined in `settings.py`.
 
@@ -54,7 +54,7 @@ Training is initiated with the `./run_multiworker_hvd.sh` command which:
 3. Synchronizes the existing working directory with the corresponding directories on all other worker nodes
 4. Sends the MPI command to initiate training on all the nodes via exec_multiworker.sh
 ```
-Optionally, `run_multiworker_hvd.sh` can be passed the following arguments which will override the defaults `<logidr> <hosts_file> <workers_per_node> <inter_op_threads>`.
+Optionally, the following arguments may be passed to  `run_multiworker_hvd.sh` which will override the defaults: `<logidr> <hosts_file> <workers_per_node> <inter_op_threads>`.
 
 The `exec_multiworker.sh` script then executes the following on each node:
 
