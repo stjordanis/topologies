@@ -1,6 +1,17 @@
 #!/bin/bash
-# To run: bash run_multiworker_hvd.sh <logidr> <hostfile> <workers per node> <inter op threads>
+# To run: bash run_multiworker_hvd.sh <logdir> <hostfile> <workers per node> <inter op threads>
 # Note: The total number of workers deployed will be the number of workers per node * number of nodes
+
+if [ "$1" == "-h" ]; then
+  echo "Usage: `basename $0` [<logdir>] [<hostfile>] [<workers per node>] [<inter op threads>]"
+  echo "   where "
+  echo "   [<logdir>]    = Directory for the TensorFlow/TensorBoard logs"
+  echo "   [<hostfile>]  = File name for the node IP list (one IP per line)"
+  echo "   [<workers per node>] = Number of workers per node"
+  echo "   [<inter op threads>] = Number of inter-op-parallelism threads for TensorFlow"
+  echo " "
+  exit 0
+fi
 
 logdir=${1:-_multiworker}     # Default suffix is _multiworker
 node_ips=${2:-hosts.txt}      # Default is the hosts.txt file
