@@ -9,15 +9,19 @@ export num_inter_threads=${4:-2} # Default to 2 inter_op threads
 
 export physical_cores=`lscpu | grep "Core(s) per socket" | cut -d':' -f2 | sed "s/ //g"` # Total number of physical cores per socket
 export num_nodes=`cat ${node_ips} | sed '/^\s*$/d' | wc -l` # Hosts.txt should contain a single host per line
+export num_sockets=`lscpu | grep "Socket(s)" | cut -d':' -f2 | sed "s/ //g"`   # Number of sockets per node
+export logical_cores=`nproc`
+
 export num_processes=$(( $num_nodes * $num_workers_per_node )) # Total number of workers across all nodes
-export ppr=2   # Number of sockets per node
+export ppr=$(( $num_workers_per_node / $num_sockets ))
+export pe=$(( $physical_cores / $ppr ))
 
 echo "Running $num_workers_per_node worker(s)/node on $num_nodes nodes..."
 
 echo "Synching hosts.."
 bash synch_servers.sh
 
-mpirun -np $num_processes --hostfile $node_ips -bind-to none \
-        --map-by ppr:$ppr:socket:pe=$physical_cores \
-	--report-bindings --oversubscribe \
+mpirun -np $num_processes --hostfile $node_ips \
+        --map-by ppr:$ppr:socket:pe=$pe \
+    --report-bindings --oversubscribe \
         bash exec_multiworker.sh $logdir $ppr $num_inter_threads
