@@ -370,8 +370,8 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     	] #hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
 	
     if (hvd.rank() == 0) and (hvd.local_rank() == 0):
-
-        callbacks.append(model_checkpoint)
+	
+	callbacks.append(model_checkpoint)
 	callbacks.append(tensorboard_checkpoint)
 
 
