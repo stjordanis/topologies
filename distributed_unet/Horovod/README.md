@@ -4,7 +4,7 @@ This repository contains code for multimodal brain tumor segmentation with U-Net
 
 ## Setup
 
-Horovod requires MPI to be installed globally on all nodes. Install it by running `./install_mpi.sh` on each node.
+Horovod requires MPI to be installed globally on all nodes. Install it by running `sudo yum install openmpi` on each node.
 
 Use conda to setup a virtual environment called 'tf' on all the nodes:
 ```
