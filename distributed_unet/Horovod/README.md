@@ -14,11 +14,12 @@ conda create -n tf -c intel python=2 pip numpy
 Use `source activate tf` to enter the virtual environment, and install the following packages, beginning with `conda install -c anaconda tensorflow-mkl` to install the latest release of Intel Optimized TensorFlow with MKL-DNN. Additional packages can be installed using pip:
 ```
 cython
-horovod
+psutil
 SimpleITK
 opencv-python
 h5py
 tqdm
+horovod
 ```
 
 ## Required data
