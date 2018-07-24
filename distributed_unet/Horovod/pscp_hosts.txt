@@ -1,2 +1,4 @@
-<hostname1>
-<hostname2>
+skl-node2
+skl-node3
+skl-node4
+

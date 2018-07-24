@@ -20,8 +20,8 @@
 
 import os
 
-BASE = "../../../"
-OUT_PATH  = os.path.join(BASE, "data/")
+BASE = "/home/nfsshare/"
+OUT_PATH  = os.path.join(BASE, "unet/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
@@ -29,7 +29,7 @@ IMG_WIDTH = 128
 NUM_IN_CHANNELS = 1
 NUM_OUT_CHANNELS = 1
 
-EPOCHS = 15
+EPOCHS = 5
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0005
 PRINT_MODEL = False
