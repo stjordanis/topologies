@@ -21,7 +21,7 @@
 import horovod.keras as hvd
 # Horovod: initialize Horovod.
 hvd.init()
-workers=hvd.size()
+workers = hvd.size()
 
 # import model as mdl
 import psutil
@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--use_upsampling",
                     help="use upsampling instead of transposed convolution",
                     action="store_true", default=settings.USE_UPSAMPLING)
-parser.add_argument("--num_warmups", type=int, default=1, 
+parser.add_argument("--num_warmups", type=int, default=1,
                     help="Number of warmup epochs for Horovod")
 parser.add_argument("--num_threads", type=int,
                     default=settings.NUM_INTRA_THREADS,
@@ -70,7 +70,8 @@ parser.add_argument(
     action="store_true",
     default=settings.CREATE_TRACE_TIMELINE)
 
-parser.add_argument("--logdir", help="TensorBoard logs",action="store", default="./tensorboard")
+parser.add_argument("--logdir", help="TensorBoard logs",
+                    action="store", default="./tensorboard")
 
 args = parser.parse_args()
 
@@ -144,13 +145,14 @@ import os
 from preprocess import *
 import settings
 
+
 def dice_coef(y_true, y_pred, smooth=1.0):
-   intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
-   union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
-   numerator = tf.constant(2.) * intersection + smooth
-   denominator = union + smooth
-   coef = numerator / denominator
-   return tf.reduce_mean(coef)
+    intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
+    union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
+    numerator = tf.constant(2.) * intersection + smooth
+    denominator = union + smooth
+    coef = numerator / denominator
+    return tf.reduce_mean(coef)
 
 
 def dice_coef_loss(y_true, y_pred, smooth=1.):
@@ -277,6 +279,7 @@ def unet_model(img_height=224,
 
     return model
 
+
 def get_batch(imgs, msks, batch_size):
 
     while True:
@@ -284,6 +287,7 @@ def get_batch(imgs, msks, batch_size):
         idx = np.random.permutation(len(imgs))[:batch_size]
 
         yield imgs[idx], msks[idx]
+
 
 def train_and_predict(data_path, img_height, img_width, n_epoch,
                       input_no=3, output_no=3, mode=1):
@@ -328,12 +332,12 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     if (args.use_upsampling):
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/upsampling_{}".format(args.logdir,
-                batch_size, directoryName),
+                                                      batch_size, directoryName),
             write_graph=True, write_images=True)
     else:
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/transposed_{}".format(args.logdir,
-                batch_size, directoryName),
+                                                      batch_size, directoryName),
             write_graph=True, write_images=True)
 
     print("-" * 30)
@@ -349,83 +353,82 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
         imgs_test = np.swapaxes(imgs_test, 1, -1)
         msks_test = np.swapaxes(msks_test, 1, -1)
 
-
     train_generator = get_batch(imgs_train, msks_train, batch_size)
 
     callbacks = [
-    	# Horovod: broadcast initial variable states from rank 0 to all other processes.
-    	# This is necessary to ensure consistent initialization of all workers when
-    	# training is started with random weights or restored from a checkpoint.
-    	hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+        # Horovod: broadcast initial variable states from rank 0 to all other processes.
+        # This is necessary to ensure consistent initialization of all workers when
+        # training is started with random weights or restored from a checkpoint.
+        hvd.callbacks.BroadcastGlobalVariablesCallback(0),
 
-    	# Horovod: average metrics among workers at the end of every epoch.
-    	#
-    	# Note: This callback must be in the list before the ReduceLROnPlateau,
-    	# TensorBoard or other metrics-based callbacks.
-    	hvd.callbacks.MetricAverageCallback(),
+        # Horovod: average metrics among workers at the end of every epoch.
+        #
+        # Note: This callback must be in the list before the ReduceLROnPlateau,
+        # TensorBoard or other metrics-based callbacks.
+        hvd.callbacks.MetricAverageCallback(),
 
-    	# Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
-    	# accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
-    	# the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    	] #hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
-	
+        # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
+        # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
+        # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
+    ]  # hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
+
     if (hvd.rank() == 0) and (hvd.local_rank() == 0):
 
         callbacks.append(model_checkpoint)
         callbacks.append(tensorboard_checkpoint)
 
-
     history = model.fit_generator(train_generator,
-                            steps_per_epoch=len(imgs_train)//batch_size, #//hvd.size(),
-                            epochs=n_epoch,
-                            validation_data = (imgs_test, msks_test),
-                            callbacks=callbacks)
+                                  steps_per_epoch=len(
+                                      imgs_train)//batch_size,  # //hvd.size(),
+                                  epochs=n_epoch,
+                                  validation_data=(imgs_test, msks_test),
+                                  callbacks=callbacks)
 
     if (hvd.rank() == 0) and (hvd.local_rank() == 0):
 
-       if args.trace:
-          """
-          Save the training timeline
-          """
-          from tensorflow.python.client import timeline
+        if args.trace:
+            """
+            Save the training timeline
+            """
+            from tensorflow.python.client import timeline
 
-          fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-          chrome_trace = fetched_timeline.generate_chrome_trace_format()
-          with open(timeline_filename, "w") as f:
-              print("Saved Tensorflow trace to: {}".format(timeline_filename))
-              f.write(chrome_trace)
+            fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+            chrome_trace = fetched_timeline.generate_chrome_trace_format()
+            with open(timeline_filename, "w") as f:
+                print("Saved Tensorflow trace to: {}".format(timeline_filename))
+                f.write(chrome_trace)
 
-       print("-" * 30)
-       print("Loading the best trained model ...")
-       print("-" * 30)
-       model = K.models.load_model(
-           model_fn, custom_objects={
-               "dice_coef_loss": dice_coef_loss,
-               "dice_coef": dice_coef})
+        print("-" * 30)
+        print("Loading the best trained model ...")
+        print("-" * 30)
+        model = K.models.load_model(
+            model_fn, custom_objects={
+                "dice_coef_loss": dice_coef_loss,
+                "dice_coef": dice_coef})
 
-       print("-" * 30)
-       print("Predicting masks on test data...")
-       print("-" * 30)
-       msks_pred = model.predict(imgs_test, verbose=1)
+        print("-" * 30)
+        print("Predicting masks on test data...")
+        print("-" * 30)
+        msks_pred = model.predict(imgs_test, verbose=1)
 
-       print("Saving predictions to file")
-       if (args.use_upsampling):
-           np.save("msks_pred_upsampling.npy", msks_pred)
-       else:
-           np.save("msks_pred_transposed.npy", msks_pred)
+        print("Saving predictions to file")
+        if (args.use_upsampling):
+            np.save("msks_pred_upsampling.npy", msks_pred)
+        else:
+            np.save("msks_pred_transposed.npy", msks_pred)
 
-       start_inference = time.time()
-       print("Evaluating model")
-       scores = model.evaluate(
-           imgs_test,
-           msks_test,
-           batch_size=batch_size,
-           verbose=2)
+        start_inference = time.time()
+        print("Evaluating model")
+        scores = model.evaluate(
+            imgs_test,
+            msks_test,
+            batch_size=batch_size,
+            verbose=2)
 
-       elapsed_time = time.time() - start_inference
-       print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
-           imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
-       print("Evaluation Scores", scores)
+        elapsed_time = time.time() - start_inference
+        print("{} images in {:.2f} seconds = {:.3f} images per second inference".format(
+            imgs_test.shape[0], elapsed_time, imgs_test.shape[0] / elapsed_time))
+        print("Evaluation Scores", scores)
 
 
 if __name__ == "__main__":

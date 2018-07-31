@@ -63,7 +63,8 @@ parser.add_argument(
     action="store_true",
     default=settings.CREATE_TRACE_TIMELINE)
 
-parser.add_argument("--logdir", help="TensorBoard logs",action="store", default="./tensorboard")
+parser.add_argument("--logdir", help="TensorBoard logs",
+                    action="store", default="./tensorboard")
 
 args = parser.parse_args()
 
@@ -139,12 +140,13 @@ import settings
 
 
 def dice_coef(y_true, y_pred, smooth=1.0):
-   intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
-   union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
-   numerator = tf.constant(2.) * intersection + smooth
-   denominator = union + smooth
-   coef = numerator / denominator
-   return tf.reduce_mean(coef)
+    intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
+    union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
+    numerator = tf.constant(2.) * intersection + smooth
+    denominator = union + smooth
+    coef = numerator / denominator
+    return tf.reduce_mean(coef)
+
 
 def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
@@ -157,7 +159,6 @@ def dice_coef_loss(y_true, y_pred, smooth=1.0):
                        K.backend.sum(y_pred_f) + smooth))
 
     return loss
-
 
 
 def unet_model(img_height=224,
@@ -272,6 +273,7 @@ def unet_model(img_height=224,
 
     return model
 
+
 def get_batch(imgs, msks, batch_size):
 
     while True:
@@ -279,6 +281,7 @@ def get_batch(imgs, msks, batch_size):
         idx = np.random.permutation(len(imgs))[:batch_size]
 
         yield imgs[idx], msks[idx]
+
 
 def train_and_predict(data_path, img_height, img_width, n_epoch,
                       input_no=3, output_no=3, mode=1):
@@ -323,12 +326,12 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     if (args.use_upsampling):
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/upsampling_{}".format(args.logdir,
-                batch_size, directoryName),
+                                                      batch_size, directoryName),
             write_graph=True, write_images=True)
     else:
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/transposed_{}".format(args.logdir,
-                batch_size, directoryName),
+                                                      batch_size, directoryName),
             write_graph=True, write_images=True)
 
     print("-" * 30)
@@ -344,11 +347,9 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
         imgs_test = np.swapaxes(imgs_test, 1, -1)
         msks_test = np.swapaxes(msks_test, 1, -1)
 
-
     train_generator = get_batch(imgs_train, msks_train, batch_size)
 
     callbacks = []
-    
 
     callbacks.append(model_checkpoint)
     callbacks.append(tensorboard_checkpoint)
@@ -356,7 +357,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     history = model.fit_generator(train_generator,
                                   steps_per_epoch=len(imgs_train)//batch_size,
                                   epochs=n_epoch,
-                                  validation_data = (imgs_test, msks_test),
+                                  validation_data=(imgs_test, msks_test),
                                   callbacks=callbacks)
 
     if args.trace:

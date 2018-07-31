@@ -82,7 +82,8 @@ callbacks = [
 
 # Horovod: save checkpoints only on worker 0 to prevent other workers from corrupting them.
 if hvd.rank() == 0:
-    callbacks.append(keras.callbacks.ModelCheckpoint('./checkpoint-{epoch}.h5'))
+    callbacks.append(keras.callbacks.ModelCheckpoint(
+        './checkpoint-{epoch}.h5'))
 
 model.fit(x_train, y_train,
           batch_size=batch_size,
@@ -93,4 +94,3 @@ model.fit(x_train, y_train,
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
-

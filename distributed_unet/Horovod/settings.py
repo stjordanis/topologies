@@ -21,7 +21,7 @@
 import os
 
 BASE = "/home/nfsshare/"
-OUT_PATH  = os.path.join(BASE, "unet/")
+OUT_PATH = os.path.join(BASE, "unet/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
@@ -37,15 +37,16 @@ PRINT_MODEL = False
 # Mode 1: Use flair to identify the entire tumor
 # Mode 2: Use T1 Gd to identify the active tumor
 # Mode 3: Use T2 to identify the active core (necrosis, enhancing, non-enh)
-MODE=1  # 1, 2, or 3
+MODE = 1  # 1, 2, or 3
 
 
 import psutil
 BLOCKTIME = 0
 NUM_INTER_THREADS = 2
-NUM_INTRA_THREADS = psutil.cpu_count(logical=False) # Total number of physical cores across all sockets
+# Total number of physical cores across all sockets
+NUM_INTRA_THREADS = psutil.cpu_count(logical=False)
 
 CHANNELS_FIRST = False
 USE_KERAS_API = True
 USE_UPSAMPLING = False
-CREATE_TRACE_TIMELINE=False
+CREATE_TRACE_TIMELINE = False
