@@ -311,7 +311,6 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     print("Creating and compiling model...")
     print("-" * 30)
 
-    # model = mdl.unet(args, data_format, hvd.size(), hvd.rank(), img_height, img_width, input_no, output_no)
     model = unet_model(img_height, img_width, input_no, output_no)
 
     if (args.use_upsampling):
@@ -356,21 +355,31 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     train_generator = get_batch(imgs_train, msks_train, batch_size)
 
     callbacks = [
-        # Horovod: broadcast initial variable states from rank 0 to all other processes.
-        # This is necessary to ensure consistent initialization of all workers when
-        # training is started with random weights or restored from a checkpoint.
+        # Horovod: broadcast initial variable states from 
+        # rank 0 to all other processes.
+        # This is necessary to ensure consistent 
+        # initialization of all workers when
+        # training is started with random weights 
+        # or restored from a checkpoint.
         hvd.callbacks.BroadcastGlobalVariablesCallback(0),
 
-        # Horovod: average metrics among workers at the end of every epoch.
+        # Horovod: average metrics among workers 
+        # at the end of every epoch.
         #
-        # Note: This callback must be in the list before the ReduceLROnPlateau,
+        # Note: This callback must be in the list 
+        # before the ReduceLROnPlateau,
         # TensorBoard or other metrics-based callbacks.
         hvd.callbacks.MetricAverageCallback(),
 
-        # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
-        # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
-        # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    ]  # hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=args.num_warmups, verbose=1) ]
+        # Horovod: using `lr = 1.0 * hvd.size()` 
+        # from the very beginning leads to worse final
+        # accuracy. Scale the learning rate `lr = 1.0` 
+        # ---> `lr = 1.0 * hvd.size()` during
+        # the first five epochs. 
+        # See https://arxiv.org/abs/1706.02677 for details.
+    ]  
+    # hvd.callbacks.LearningRateWarmupCallback(
+    #           warmup_epochs=args.num_warmups, verbose=1) ]
 
     if (hvd.rank() == 0) and (hvd.local_rank() == 0):
 
@@ -379,7 +388,7 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
     history = model.fit_generator(train_generator,
                                   steps_per_epoch=len(
-                                      imgs_train)//batch_size,  # //hvd.size(),
+                                      imgs_train)//batch_size, 
                                   epochs=n_epoch,
                                   validation_data=(imgs_test, msks_test),
                                   callbacks=callbacks)
