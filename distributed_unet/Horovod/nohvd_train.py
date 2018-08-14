@@ -19,7 +19,6 @@
 #
 
 # import model as mdl
-import psutil
 import settings    # Use the custom settings.py file for default parameters
 import argparse
 parser = argparse.ArgumentParser()

@@ -33,4 +33,4 @@ echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
 #mpirun --mca oob_tcp_if_include eth0 --mca btl_tcp_if_include eth0 -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
-mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
+mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker_mnist.sh $logdir $ppr $num_inter_threads

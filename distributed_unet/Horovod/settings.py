@@ -20,7 +20,7 @@
 
 import os
 
-BASE = "/home/nfsshare/"
+BASE = "/var/datasets/"
 OUT_PATH = os.path.join(BASE, "unet/")
 
 IMG_HEIGHT = 128
@@ -29,7 +29,7 @@ IMG_WIDTH = 128
 NUM_IN_CHANNELS = 1
 NUM_OUT_CHANNELS = 1
 
-EPOCHS = 5
+EPOCHS = 10
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0005
 PRINT_MODEL = False
@@ -39,12 +39,10 @@ PRINT_MODEL = False
 # Mode 3: Use T2 to identify the active core (necrosis, enhancing, non-enh)
 MODE = 1  # 1, 2, or 3
 
-
-import psutil
 BLOCKTIME = 0
 NUM_INTER_THREADS = 2
 # Total number of physical cores across all sockets
-NUM_INTRA_THREADS = psutil.cpu_count(logical=False)
+NUM_INTRA_THREADS = 72
 
 CHANNELS_FIRST = False
 USE_KERAS_API = True

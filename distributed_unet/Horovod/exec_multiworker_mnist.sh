@@ -10,6 +10,6 @@ export num_threads=$(( ${2} * $physical_cores )) # Total number of physical core
 
 #python hvd_train.py --logdir="tensorboard${1}" --num_inter_threads=${3} --num_threads=$num_threads
 #python keras_hvd_mnist.py
-python benchmark_horovod.py
+python benchmark_horovod_mnist.py --logdir="checkpoints${1}" --num_inter_threads=${3} --num_threads=$num_threads
 
 conda deactivate
