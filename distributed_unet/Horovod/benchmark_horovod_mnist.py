@@ -26,7 +26,6 @@ Runs simple convolutional model to train MNIST
 import tensorflow as tf
 from tensorflow import layers
 from tensorflow.examples.tutorials.mnist import input_data
-import horovod.tensorflow as hvd
 
 import os
 from datetime import datetime
@@ -39,7 +38,7 @@ tf.app.flags.DEFINE_integer("num_inter_threads", 2,
 tf.app.flags.DEFINE_integer("num_threads", os.cpu_count(),
 							"# intra op threads")
 
-tf.app.flags.DEFINE_integer("total_steps", 10000,
+tf.app.flags.DEFINE_integer("total_steps", 4000,
 							"Number of training steps")
 
 tf.app.flags.DEFINE_integer("log_steps", 20,
@@ -58,6 +57,8 @@ config = tf.ConfigProto(intra_op_parallelism_threads=FLAGS.num_threads,
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+if not FLAGS.no_horovod:
+	import horovod.tensorflow as hvd
 
 def get_model(feature, label):
 
@@ -173,6 +174,24 @@ def main(_):
 	else:
 		last_step = FLAGS.total_steps
 
+	def formatter_log(tensors):
+		if FLAGS.no_horovod:
+			logstring= "Step {} of {}: " \
+			   " training loss = {:.4f}," \
+		       " training accuracy = {:.4f}".format(tensors["step"],
+			   last_step,
+			   tensors["loss"], tensors["accuracy"])
+		else:
+			   logstring= "HOROVOD (Worker #{}), Step {} of {}: " \
+			   " training loss = {:.4f}," \
+   		       " training accuracy = {:.4f}".format(
+			   hvd.rank(),
+			   tensors["step"],
+			   last_step,
+   			   tensors["loss"], tensors["accuracy"])
+
+		return logstring
+
 	hooks = [
 
 		tf.train.StopAtStepHook(last_step=last_step),
@@ -181,7 +200,8 @@ def main(_):
 		tf.train.LoggingTensorHook(tensors={"step": global_step,
 									"loss": loss,
 									"accuracy": accuracy},
-								   every_n_iter=FLAGS.log_steps),
+								   every_n_iter=FLAGS.log_steps,
+								   formatter=formatter_log),
 	]
 
 	# Horovod: BroadcastGlobalVariablesHook broadcasts
