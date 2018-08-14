@@ -46,8 +46,12 @@ tf.app.flags.DEFINE_integer("log_steps", 20,
 							"Number of steps between logs")
 tf.app.flags.DEFINE_integer("batch_size", 128,
 							"Batch Size for Training")
-tf.app.flags.DEFINE_string("logdir", "checkpoints_mnist/",
+tf.app.flags.DEFINE_string("logdir", "checkpoints_mnist",
 							"Log directory")
+tf.app.flags.DEFINE_boolean("no_horovod", False,
+							"Don't use Horovod. Single node training only.")
+tf.app.flags.DEFINE_float("learningrate", 0.001,
+							"Learning rate")
 
 config = tf.ConfigProto(intra_op_parallelism_threads=FLAGS.num_threads,
 						inter_op_parallelism_threads=FLAGS.num_inter_threads)
@@ -136,8 +140,9 @@ def main(_):
 	logging.info("Starting at: {}".format(start_time))
 	logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
 
-	# Initialize Horovod.
-	hvd.init()
+	if not FLAGS.no_horovod:
+		# Initialize Horovod.
+		hvd.init()
 
 	# Download MNIST dataset.
 	mnist = input_data.read_data_sets("MNIST_data/", one_hot=False)
@@ -150,44 +155,56 @@ def main(_):
 	# Define model
 	predict, loss, accuracy = get_model(image, label)
 
-	# Horovod: adjust learning rate based on number workers
-	opt = tf.train.RMSPropOptimizer(0.001 * hvd.size())
+	if not FLAGS.no_horovod:
+		# Horovod: adjust learning rate based on number workers
+		opt = tf.train.RMSPropOptimizer(FLAGS.learningrate * hvd.size())
+	else:
+		opt = tf.train.RMSPropOptimizer(FLAGS.learningrate)
 
 	# Wrap optimizer with Horovod Distributed Optimizer.
-	opt = hvd.DistributedOptimizer(opt)
+	if FLAGS.no_horovod is None:
+		opt = hvd.DistributedOptimizer(opt)
 
 	global_step = tf.train.get_or_create_global_step()
 	train_op = opt.minimize(loss, global_step=global_step)
 
-	last_step = FLAGS.total_steps // hvd.size()
+	if not FLAGS.no_horovod:
+		last_step = FLAGS.total_steps // hvd.size()
+	else:
+		last_step = FLAGS.total_steps
 
 	hooks = [
-		# Horovod: BroadcastGlobalVariablesHook broadcasts
-		# initial variable states from rank 0 to all other
-		# processes. This is necessary to ensure consistent
-		# initialization of all workers when training is
-		# started with random weights
-		# or restored from a checkpoint.
-		hvd.BroadcastGlobalVariablesHook(0),
 
-		# Horovod: adjust number of steps based on number of GPUs.
 		tf.train.StopAtStepHook(last_step=last_step),
 
-		# Prints the loss and step every 10 steps
+		# Prints the loss and step every log_steps steps
 		tf.train.LoggingTensorHook(tensors={"step": global_step,
 									"loss": loss,
 									"accuracy": accuracy},
 								   every_n_iter=FLAGS.log_steps),
 	]
 
-	# Horovod: save checkpoints only on worker 0 to prevent other workers from
-	# corrupting them.
-	if hvd.rank() == 0:
-		checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
-						hvd.size(),
-						datetime.now().strftime("%Y%m%d-%H%M%S"))
+	# Horovod: BroadcastGlobalVariablesHook broadcasts
+	# initial variable states from rank 0 to all other
+	# processes. This is necessary to ensure consistent
+	# initialization of all workers when training is
+	# started with random weights
+	# or restored from a checkpoint.
+	if not FLAGS.no_horovod:
+		hooks.append(hvd.BroadcastGlobalVariablesHook(0))
+
+		# Horovod: save checkpoints only on worker 0 to prevent other workers from
+		# corrupting them.
+		if hvd.rank() == 0:
+			checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
+							hvd.size(),
+							datetime.now().strftime("%Y%m%d-%H%M%S"))
+		else:
+			checkpoint_dir = None
+
 	else:
-		checkpoint_dir = None
+		checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.logdir,
+						datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 	# The MonitoredTrainingSession takes care of session initialization,
 	# restoring from a checkpoint, saving to a checkpoint,
@@ -210,4 +227,5 @@ def main(_):
 
 if __name__ == "__main__":
 
+	logging.getLogger().setLevel(logging.INFO)
 	tf.app.run()
