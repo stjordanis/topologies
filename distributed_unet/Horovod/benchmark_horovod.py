@@ -38,6 +38,8 @@ tf.app.flags.DEFINE_integer("total_steps", 2000,
 
 tf.app.flags.DEFINE_integer("log_steps", 20,
 							"Number of steps between logs")
+tf.app.flags.DEFINE_integer("batch_size", 128,
+							"Batch Size for Training")
 
 config = tf.ConfigProto(intra_op_parallelism_threads=FLAGS.intra_op_threads,
                         inter_op_parallelism_threads=FLAGS.inter_op_threads)
@@ -184,7 +186,7 @@ def main(_):
         while not mon_sess.should_stop():
 
             # Run a training step synchronously.
-            image_, label_ = mnist.train.next_batch(100)
+            image_, label_ = mnist.train.next_batch(FLAGS.batch_size)
             mon_sess.run(train_op, feed_dict={image: image_, label: label_})
 
 
