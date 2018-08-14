@@ -15,7 +15,7 @@ fi
 
 logdir=${1:-_multiworker}     # Default suffix is _multiworker
 node_ips=${2:-hosts.txt}      # Default is the hosts.txt file
-export num_workers_per_node=${3:-2}  # Default 4 workers per node
+export num_workers_per_node=${3:-1}  # Default 1 workers per node
 export num_inter_threads=${4:-2} # Default to 2 inter_op threads
 
 export physical_cores=`lscpu | grep "Core(s) per socket" | cut -d':' -f2 | sed "s/ //g"` # Total number of physical cores per socket

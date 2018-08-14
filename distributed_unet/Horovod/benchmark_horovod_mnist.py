@@ -29,7 +29,6 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 import os
 from datetime import datetime
-import logging
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -138,8 +137,8 @@ def get_model(feature, label):
 def main(_):
 
 	start_time = datetime.now()
-	logging.info("Starting at: {}".format(start_time))
-	logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
+	tf.logging.info("Starting at: {}".format(start_time))
+	tf.logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
 
 	if not FLAGS.no_horovod:
 		# Initialize Horovod.
@@ -242,10 +241,9 @@ def main(_):
 
 
 	stop_time = datetime.now()
-	logging.info("Stopping at: {}".format(stop_time))
-	logging.info("Elapsed time was: {}".format(stop_time-start_time))
+	tf.logging.info("Stopping at: {}".format(stop_time))
+	tf.logging.info("Elapsed time was: {}".format(stop_time-start_time))
 
 if __name__ == "__main__":
 
-	logging.getLogger().setLevel(logging.INFO)
 	tf.app.run()
