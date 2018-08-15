@@ -37,25 +37,27 @@ import settings
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer("num_inter_threads", 2,
-							"# inter op threads")
+                            "# inter op threads")
 tf.app.flags.DEFINE_integer("num_threads", os.cpu_count(),
-							"# intra op threads")
+                            "# intra op threads")
 
-tf.app.flags.DEFINE_integer("total_steps", 1000,
-							"Number of training steps")
+tf.app.flags.DEFINE_integer("total_steps", 50,
+                            "Number of training steps")
 
-tf.app.flags.DEFINE_integer("log_steps", 30,
-							"Number of steps between logs")
+tf.app.flags.DEFINE_integer("log_steps", 3,
+                            "Number of steps between logs")
+tf.app.flags.DEFINE_integer("validation_steps", 7,
+                            "Number of steps between validations")
 tf.app.flags.DEFINE_integer("batch_size", 128,
-							"Batch Size for Training")
+                            "Batch Size for Training")
 tf.app.flags.DEFINE_string("logdir", "checkpoints_mnist",
-							"Log directory")
+                            "Log directory")
 tf.app.flags.DEFINE_boolean("no_horovod", False,
-							"Don't use Horovod. Single node training only.")
+                            "Don't use Horovod. Single node training only.")
 tf.app.flags.DEFINE_float("learningrate", 0.0005,
-							"Learning rate")
+                            "Learning rate")
 tf.app.flags.DEFINE_boolean("use_upsampling", settings.USE_UPSAMPLING,
-						"True = Use upsampling; False = Use transposed convolution")
+                        "True = Use upsampling; False = Use transposed convolution")
 
 os.environ["KMP_BLOCKTIME"] = "0"
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
@@ -63,123 +65,174 @@ os.environ["OMP_NUM_THREADS"] = str(FLAGS.num_threads)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 
 config = tf.ConfigProto(intra_op_parallelism_threads=FLAGS.num_threads,
-						inter_op_parallelism_threads=FLAGS.num_inter_threads)
+                        inter_op_parallelism_threads=FLAGS.num_inter_threads)
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 if not FLAGS.no_horovod:
-	import horovod.tensorflow as hvd
+    import horovod.tensorflow as hvd
+
 
 def main(_):
 
-	start_time = datetime.now()
-	tf.logging.info("Starting at: {}".format(start_time))
-	tf.logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
+    start_time = datetime.now()
+    tf.logging.info("Starting at: {}".format(start_time))
+    tf.logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
 
-	# Load datasets
-	imgs_train, msks_train, imgs_test, msks_test = load_datasets(FLAGS)
+    # Load datasets
+    imgs_train, msks_train, imgs_test, msks_test = load_datasets(FLAGS)
+
+    if not FLAGS.no_horovod:
+        # Initialize Horovod.
+        hvd.init()
+
+    # Define model
+    model = define_model(imgs_train.shape, msks_train.shape, FLAGS)
+
+    if not FLAGS.no_horovod:
+        # Horovod: adjust learning rate based on number workers
+        opt = tf.train.AdamOptimizer(FLAGS.learningrate * hvd.size())
+    else:
+        opt = tf.train.AdamOptimizer(FLAGS.learningrate)
+
+    # Wrap optimizer with Horovod Distributed Optimizer.
+    if FLAGS.no_horovod is None:
+        opt = hvd.DistributedOptimizer(opt)
+
+    global_step = tf.train.get_or_create_global_step()
+    train_op = opt.minimize(model["loss"], global_step=global_step)
+
+    if not FLAGS.no_horovod:
+        last_step = FLAGS.total_steps // hvd.size()
+    else:
+        last_step = FLAGS.total_steps
+
+    def formatter_log(tensors):
+        """
+        Format the log output
+        """
+        if FLAGS.no_horovod:
+            logstring = "Step {} of {}: " \
+               " training Dice loss = {:.4f}," \
+               " training Dice = {:.4f}".format(tensors["step"],
+               last_step,
+               tensors["loss"], tensors["dice"])
+        else:
+            logstring = "HOROVOD (Worker #{}), Step {} of {}: " \
+               " training Dice loss = {:.4f}," \
+               " training Dice = {:.4f}".format(
+               hvd.rank(),
+               tensors["step"],
+               last_step,
+               tensors["loss"], tensors["dice"])
+
+        return logstring
+
+    hooks = [
+
+        tf.train.StopAtStepHook(last_step=last_step),
+
+        # Prints the loss and step every log_steps steps
+        tf.train.LoggingTensorHook(tensors={"step": global_step,
+                                    "loss": model["loss"],
+                                    "dice": model["metric_dice"]},
+                                   every_n_iter=FLAGS.log_steps,
+                                   formatter=formatter_log),
+    ]
+
+    # Horovod: BroadcastGlobalVariablesHook broadcasts
+    # initial variable states from rank 0 to all other
+    # processes. This is necessary to ensure consistent
+    # initialization of all workers when training is
+    # started with random weights
+    # or restored from a checkpoint.
+    if not FLAGS.no_horovod:
+        hooks.append(hvd.BroadcastGlobalVariablesHook(0))
+
+        # Horovod: save checkpoints only on worker 0 to prevent other workers from
+        # corrupting them.
+        if hvd.rank() == 0:
+            checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
+                            hvd.size(),
+                            datetime.now().strftime("%Y%m%d-%H%M%S"))
+        else:
+            checkpoint_dir = None
+
+    else:
+        checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.logdir,
+                        datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+    # The MonitoredTrainingSession takes care of session initialization,
+    # restoring from a checkpoint, saving to a checkpoint,
+    # and closing when done or an error occurs.
+    current_step = 0
+    startidx = 0
+
+    with tf.train.MonitoredTrainingSession(checkpoint_dir=checkpoint_dir,
+                                           hooks=hooks,
+                                           save_summaries_steps=FLAGS.log_steps,
+                                           log_step_count_steps=FLAGS.log_steps,
+                                           config=config) as mon_sess:
+        while not mon_sess.should_stop():
+
+            # Run a training step synchronously.
+            # image_, mask_ = get_batch(imgs_train,
+            #                           msks_train,
+            #                           FLAGS.batch_size)
+
+            # Do batch in order
+            stopidx = startidx + FLAGS.batch_size
+            if (stopidx > len(imgs_train)):
+                stopidx = len(imgs_train)
+
+            image_ = imgs_train[startidx:stopidx]
+            mask_  = msks_train[startidx:stopidx]
+
+            mon_sess.run(train_op, feed_dict={model["input"]: image_,
+                                              model["label"]: mask_})
+
+            current_step += 1
+            """
+            Run validation test on model
+            """
+            if (current_step % FLAGS.validation_steps == 0):
 
 
-	if not FLAGS.no_horovod:
-		# Initialize Horovod.
-		hvd.init()
+                test_dice, test_sens, test_spec, _ = mon_sess.run(
+                             [model["metric_dice_test"],
+                             model["metric_sensitivity_test"],
+                             model["metric_specificity_test"],
+                             val_summary_op],
+                             feed_dict={model["input"]: imgs_test,
+                             model["label"]: msks_test})
 
-	# Define model
-	model = define_model(imgs_train.shape, msks_train.shape, FLAGS)
+                tf.logging.info("VALIDATION METRICS: Test Dice = {:.4f},"
+                                "Test Sensitivity = {:.4f}, "
+                                "Test Specificity = {:.4f}".format(test_dice,
+                                test_sens, test_spec))
 
-	if not FLAGS.no_horovod:
-		# Horovod: adjust learning rate based on number workers
-		opt = tf.train.AdamOptimizer(FLAGS.learningrate * hvd.size())
-	else:
-		opt = tf.train.AdamOptimizer(FLAGS.learningrate)
-
-	# Wrap optimizer with Horovod Distributed Optimizer.
-	if FLAGS.no_horovod is None:
-		opt = hvd.DistributedOptimizer(opt)
-
-	global_step = tf.train.get_or_create_global_step()
-	train_op = opt.minimize(model["loss"], global_step=global_step)
-
-	if not FLAGS.no_horovod:
-		last_step = FLAGS.total_steps // hvd.size()
-	else:
-		last_step = FLAGS.total_steps
-
-	def formatter_log(tensors):
-		if FLAGS.no_horovod:
-			logstring= "Step {} of {}: " \
-			   " training loss = {:.4f}," \
-		       " training Dice = {:.4f}".format(tensors["step"],
-			   last_step,
-			   tensors["loss"], tensors["dice"])
-		else:
-			   logstring= "HOROVOD (Worker #{}), Step {} of {}: " \
-			   " training loss = {:.4f}," \
-   		       " training dice = {:.4f}".format(
-			   hvd.rank(),
-			   tensors["step"],
-			   last_step,
-   			   tensors["loss"], tensors["dice"])
-
-		return logstring
-
-	hooks = [
-
-		tf.train.StopAtStepHook(last_step=last_step),
-
-		# Prints the loss and step every log_steps steps
-		tf.train.LoggingTensorHook(tensors={"step": global_step,
-									"loss": model["loss"],
-									"dice": model["metric_dice"]},
-								   every_n_iter=FLAGS.log_steps,
-								   formatter=formatter_log),
-	]
-
-	# Horovod: BroadcastGlobalVariablesHook broadcasts
-	# initial variable states from rank 0 to all other
-	# processes. This is necessary to ensure consistent
-	# initialization of all workers when training is
-	# started with random weights
-	# or restored from a checkpoint.
-	if not FLAGS.no_horovod:
-		hooks.append(hvd.BroadcastGlobalVariablesHook(0))
-
-		# Horovod: save checkpoints only on worker 0 to prevent other workers from
-		# corrupting them.
-		if hvd.rank() == 0:
-			checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
-							hvd.size(),
-							datetime.now().strftime("%Y%m%d-%H%M%S"))
-		else:
-			checkpoint_dir = None
-
-	else:
-		checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.logdir,
-						datetime.now().strftime("%Y%m%d-%H%M%S"))
-
-	# The MonitoredTrainingSession takes care of session initialization,
-	# restoring from a checkpoint, saving to a checkpoint,
-	# and closing when done or an error occurs.
-	with tf.train.MonitoredTrainingSession(checkpoint_dir=checkpoint_dir,
-										   hooks=hooks,
-										   save_summaries_steps=FLAGS.log_steps,
-										   log_step_count_steps=FLAGS.log_steps,
-										   config=config) as mon_sess:
-		while not mon_sess.should_stop():
-
-			# Run a training step synchronously.
-			image_, mask_ = get_batch(imgs_train,
-									  msks_train,
-									  FLAGS.batch_size)
-
-			mon_sess.run(train_op, feed_dict={model["input"]: image_,
-										  	  model["label"]: mask_})
+            # Get next batch (loop around if at end)
+            startidx += FLAGS.batch_size
+            if (startidx > len(imgs_train)):
+                startidx = 0
 
 
-	stop_time = datetime.now()
-	tf.logging.info("Stopping at: {}".format(stop_time))
-	tf.logging.info("Elapsed time was: {}".format(stop_time-start_time))
+    test_dice, test_sens, test_spec = mon_sess.run(
+                 [model["metric_dice_test"],
+                 model["metric_sensitivity_test"],
+                 model["metric_specificity_test"]],
+                 feed_dict={model["input"]: imgs_test,
+                 model["label"]: msks_test})
+
+    tf.logging.info("FINAL VALIDATION METRICS: Test Dice = {:.4f},"
+                    "Test Sensitivity = {:.4f}, "
+                    "Test Specificity = {:.4f}".format(test_dice,
+                    test_sens, test_spec))
+
+    stop_time = datetime.now()
+    tf.logging.info("Stopping at: {}".format(stop_time))
+    tf.logging.info("Elapsed time was: {}".format(stop_time-start_time))
 
 if __name__ == "__main__":
 
-	tf.app.run()
+    tf.app.run()

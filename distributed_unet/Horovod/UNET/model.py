@@ -172,6 +172,9 @@ def define_model(input_shape, output_shape, FLAGS):
     model["metric_dice_test"] = dice_coef(msks, predictionMask)
     model["loss_test"] = dice_coef_loss(msks, predictionMask)
 
+    model["metric_sensitivity_test"] = sensitivity(msks, predictionMask)
+    model["metric_specificity_test"] = specificity(msks, predictionMask)
+
     """
     Summaries for TensorBoard
     """
