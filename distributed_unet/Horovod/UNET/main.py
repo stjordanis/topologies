@@ -94,14 +94,15 @@ def main(_):
 
     if not FLAGS.no_horovod:
         # Horovod: adjust learning rate based on number workers
-        opt = tf.train.AdamOptimizer(learning_rate=hvd.size() * FLAGS.learningrate,
+        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.learningrate,
                                       epsilon=tf.keras.backend.epsilon())
-        tf.logging.info("HOROVOD: New learning rate is {}".\
-                format(FLAGS.learningrate * hvd.size()))
+        #opt = tf.train.RMSPropOptimizer(0.0001 * hvd.size())
+        # tf.logging.info("HOROVOD: New learning rate is {}".\
+        #         format(FLAGS.learningrate * hvd.size()))
     else:
         opt = tf.train.AdamOptimizer(learning_rate=FLAGS.learningrate,
                                       epsilon=tf.keras.backend.epsilon())
-
+        #opt = tf.train.RMSPropOptimizer(0.0001)
 
     # Wrap optimizer with Horovod Distributed Optimizer.
     if not FLAGS.no_horovod:
@@ -190,46 +191,27 @@ def main(_):
 
         while not mon_sess.should_stop():
 
-            """
-            Run validation test on model
-            """
-            if (current_step > 0):
-                if ( ((current_step + 1) == last_step) or
-                    ((current_step % validation_steps) == 0) ):
-                    tf.logging.info("Epoch {} of {} duration = {}".\
-                                    format(epoch_idx + 1, FLAGS.epochs,
-                                    datetime.now()-last_epoch_start_time))
-                    epoch_idx += 1
-                    last_epoch_start_time = datetime.now()
-
-                    if not FLAGS.no_horovod:
-                        if (hvd.rank() == 0):
-                            validate_model(mon_sess, model,
-                                           imgs_test, msks_test)
-                    else:
-                        validate_model(mon_sess, model, imgs_test, msks_test)
-
             # Run a training step synchronously.
-            # image_, mask_ = get_batch(imgs_train,
-            #                           msks_train,
-            #                           FLAGS.batch_size)
+            image_, mask_ = get_batch(imgs_train,
+                                      msks_train,
+                                      FLAGS.batch_size)
 
             # Do batch in order
-            stopidx = startidx + FLAGS.batch_size
-            if (stopidx > train_length):
-                stopidx = train_length
-
-            image_ = imgs_train[startidx:stopidx]
-            mask_  = msks_train[startidx:stopidx]
+            # stopidx = startidx + FLAGS.batch_size
+            # if (stopidx > train_length):
+            #     stopidx = train_length
+            #
+            # image_ = imgs_train[startidx:stopidx]
+            # mask_  = msks_train[startidx:stopidx]
 
             mon_sess.run(train_op, feed_dict={model["input"]: image_,
                                               model["label"]: mask_})
 
             current_step += 1
-            # Get next batch (loop around if at end)
-            startidx += FLAGS.batch_size
-            if (startidx > train_length):
-                startidx = 0
+            # # Get next batch (loop around if at end)
+            # startidx += FLAGS.batch_size
+            # if (startidx > train_length):
+            #     startidx = 0
 
     stop_time = datetime.now()
     tf.logging.info("Stopping at: {}".format(stop_time))

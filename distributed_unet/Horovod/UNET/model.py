@@ -202,14 +202,15 @@ def validate_model(mon_sess, model, imgs_test, msks_test):
     """
     Code for model validation on test set
     """
-    test_dice, test_sens, test_spec = mon_sess.run(
-                 [model["metric_dice_test"],
-                 model["metric_sensitivity_test"],
-                 model["metric_specificity_test"]],
-                 feed_dict={model["input"]: imgs_test,
-                 model["label"]: msks_test})
-
-    tf.logging.info("VALIDATION METRICS: Test Dice = {:.4f}, "
-                    "Test Sensitivity = {:.4f}, "
-                    "Test Specificity = {:.4f}".format(test_dice,
-                    test_sens, test_spec))
+    # test_dice, test_sens, test_spec = mon_sess.run(
+    #              [model["metric_dice_test"],
+    #              model["metric_sensitivity_test"],
+    #              model["metric_specificity_test"]],
+    #              feed_dict={model["input"]: imgs_test,
+    #              model["label"]: msks_test})
+    #
+    # tf.logging.info("VALIDATION METRICS: Test Dice = {:.4f}, "
+    #                 "Test Sensitivity = {:.4f}, "
+    #                 "Test Specificity = {:.4f}".format(test_dice,
+    #                 test_sens, test_spec))
+    pass
