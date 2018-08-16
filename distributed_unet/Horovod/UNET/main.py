@@ -60,7 +60,6 @@ tf.app.flags.DEFINE_float("learningrate", settings.LEARNING_RATE,
 tf.app.flags.DEFINE_boolean("use_upsampling", settings.USE_UPSAMPLING,
                         "True = Use upsampling; False = Use transposed convolution")
 
-
 os.environ["KMP_BLOCKTIME"] = "0"
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 os.environ["OMP_NUM_THREADS"] = str(FLAGS.num_threads)
@@ -105,7 +104,7 @@ def main(_):
 
 
     # Wrap optimizer with Horovod Distributed Optimizer.
-    if FLAGS.no_horovod is None:
+    if not FLAGS.no_horovod:
         tf.logging.info("HOROVOD: Wrapped optimizer")
         opt = hvd.DistributedOptimizer(opt)
 
