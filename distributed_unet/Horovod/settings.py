@@ -20,7 +20,7 @@
 
 import os
 
-BASE = "/var/datasets/"
+BASE = "/home/nfsshare/"
 OUT_PATH = os.path.join(BASE, "unet/")
 
 IMG_HEIGHT = 128

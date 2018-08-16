@@ -26,10 +26,11 @@ Runs U-Net training on BraTS dataset
 import tensorflow as tf
 from tensorflow import layers
 
-from model import define_model
+from model import define_model, validate_model
 from data import load_datasets, get_batch
 
 import os
+import psutil
 from datetime import datetime
 
 import settings
@@ -38,26 +39,27 @@ import settings
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer("num_inter_threads", 2,
                             "# inter op threads")
-tf.app.flags.DEFINE_integer("num_threads", os.cpu_count(),
+tf.app.flags.DEFINE_integer("num_threads", psutil.cpu_count(logical=True),
                             "# intra op threads")
 
-tf.app.flags.DEFINE_integer("total_steps", 50,
-                            "Number of training steps")
+tf.app.flags.DEFINE_integer("epochs", settings.EPOCHS,
+                            "Number of epochs to train")
 
-tf.app.flags.DEFINE_integer("log_steps", 3,
+tf.app.flags.DEFINE_integer("log_steps", 5,
                             "Number of steps between logs")
-tf.app.flags.DEFINE_integer("validation_steps", 7,
-                            "Number of steps between validations")
-tf.app.flags.DEFINE_integer("batch_size", 128,
+
+tf.app.flags.DEFINE_integer("batch_size", settings.BATCH_SIZE,
                             "Batch Size for Training")
-tf.app.flags.DEFINE_string("logdir", "checkpoints_mnist",
+tf.app.flags.DEFINE_string("logdir",
+                            os.path.join(settings.OUT_PATH, "checkpoints"),
                             "Log directory")
 tf.app.flags.DEFINE_boolean("no_horovod", False,
                             "Don't use Horovod. Single node training only.")
-tf.app.flags.DEFINE_float("learningrate", 0.0005,
+tf.app.flags.DEFINE_float("learningrate", settings.LEARNING_RATE,
                             "Learning rate")
 tf.app.flags.DEFINE_boolean("use_upsampling", settings.USE_UPSAMPLING,
                         "True = Use upsampling; False = Use transposed convolution")
+
 
 os.environ["KMP_BLOCKTIME"] = "0"
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
@@ -79,6 +81,8 @@ def main(_):
     tf.logging.info("Starting at: {}".format(start_time))
     tf.logging.info("Batch size: {} images per step".format(FLAGS.batch_size))
 
+    last_epoch_start_time = start_time
+
     # Load datasets
     imgs_train, msks_train, imgs_test, msks_test = load_datasets(FLAGS)
 
@@ -91,21 +95,31 @@ def main(_):
 
     if not FLAGS.no_horovod:
         # Horovod: adjust learning rate based on number workers
-        opt = tf.train.AdamOptimizer(FLAGS.learningrate * hvd.size())
+        opt = tf.train.AdamOptimizer(learning_rate=hvd.size() * FLAGS.learningrate,
+                                      epsilon=tf.keras.backend.epsilon())
+        tf.logging.info("HOROVOD: New learning rate is {}".\
+                format(FLAGS.learningrate * hvd.size()))
     else:
-        opt = tf.train.AdamOptimizer(FLAGS.learningrate)
+        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.learningrate,
+                                      epsilon=tf.keras.backend.epsilon())
+
 
     # Wrap optimizer with Horovod Distributed Optimizer.
     if FLAGS.no_horovod is None:
+        tf.logging.info("HOROVOD: Wrapped optimizer")
         opt = hvd.DistributedOptimizer(opt)
 
     global_step = tf.train.get_or_create_global_step()
     train_op = opt.minimize(model["loss"], global_step=global_step)
 
+    train_length = len(imgs_train)
+    total_steps = (FLAGS.epochs * train_length) // FLAGS.batch_size
     if not FLAGS.no_horovod:
-        last_step = FLAGS.total_steps // hvd.size()
+        last_step = total_steps // hvd.size()
+        validation_steps = train_length // FLAGS.batch_size // hvd.size()
     else:
-        last_step = FLAGS.total_steps
+        last_step = total_steps
+        validation_steps = train_length // FLAGS.batch_size
 
     def formatter_log(tensors):
         """
@@ -167,13 +181,34 @@ def main(_):
     # and closing when done or an error occurs.
     current_step = 0
     startidx = 0
+    epoch_idx = 0
 
     with tf.train.MonitoredTrainingSession(checkpoint_dir=checkpoint_dir,
                                            hooks=hooks,
                                            save_summaries_steps=FLAGS.log_steps,
                                            log_step_count_steps=FLAGS.log_steps,
                                            config=config) as mon_sess:
+
         while not mon_sess.should_stop():
+
+            """
+            Run validation test on model
+            """
+            if (current_step > 0):
+                if ( ((current_step + 1) == last_step) or
+                    ((current_step % validation_steps) == 0) ):
+                    tf.logging.info("Epoch {} of {} duration = {}".\
+                                    format(epoch_idx + 1, FLAGS.epochs,
+                                    datetime.now()-last_epoch_start_time))
+                    epoch_idx += 1
+                    last_epoch_start_time = datetime.now()
+
+                    if not FLAGS.no_horovod:
+                        if (hvd.rank() == 0):
+                            validate_model(mon_sess, model,
+                                           imgs_test, msks_test)
+                    else:
+                        validate_model(mon_sess, model, imgs_test, msks_test)
 
             # Run a training step synchronously.
             # image_, mask_ = get_batch(imgs_train,
@@ -182,8 +217,8 @@ def main(_):
 
             # Do batch in order
             stopidx = startidx + FLAGS.batch_size
-            if (stopidx > len(imgs_train)):
-                stopidx = len(imgs_train)
+            if (stopidx > train_length):
+                stopidx = train_length
 
             image_ = imgs_train[startidx:stopidx]
             mask_  = msks_train[startidx:stopidx]
@@ -192,42 +227,10 @@ def main(_):
                                               model["label"]: mask_})
 
             current_step += 1
-            """
-            Run validation test on model
-            """
-            if (current_step % FLAGS.validation_steps == 0):
-
-
-                test_dice, test_sens, test_spec, _ = mon_sess.run(
-                             [model["metric_dice_test"],
-                             model["metric_sensitivity_test"],
-                             model["metric_specificity_test"],
-                             val_summary_op],
-                             feed_dict={model["input"]: imgs_test,
-                             model["label"]: msks_test})
-
-                tf.logging.info("VALIDATION METRICS: Test Dice = {:.4f},"
-                                "Test Sensitivity = {:.4f}, "
-                                "Test Specificity = {:.4f}".format(test_dice,
-                                test_sens, test_spec))
-
             # Get next batch (loop around if at end)
             startidx += FLAGS.batch_size
-            if (startidx > len(imgs_train)):
+            if (startidx > train_length):
                 startidx = 0
-
-
-    test_dice, test_sens, test_spec = mon_sess.run(
-                 [model["metric_dice_test"],
-                 model["metric_sensitivity_test"],
-                 model["metric_specificity_test"]],
-                 feed_dict={model["input"]: imgs_test,
-                 model["label"]: msks_test})
-
-    tf.logging.info("FINAL VALIDATION METRICS: Test Dice = {:.4f},"
-                    "Test Sensitivity = {:.4f}, "
-                    "Test Specificity = {:.4f}".format(test_dice,
-                    test_sens, test_spec))
 
     stop_time = datetime.now()
     tf.logging.info("Stopping at: {}".format(stop_time))
@@ -235,4 +238,7 @@ def main(_):
 
 if __name__ == "__main__":
 
+    os.system("hostname")
+    os.system("lscpu")
+    tf.logging.info("{}".format(FLAGS.flag_values_dict()))
     tf.app.run()

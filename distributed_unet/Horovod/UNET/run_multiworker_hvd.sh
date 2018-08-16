@@ -15,7 +15,7 @@ fi
 
 logdir=${1:-_multiworker}     # Default suffix is _multiworker
 node_ips=${2:-hosts.txt}      # Default is the hosts.txt file
-export num_workers_per_node=${3:-2}  # Default 4 workers per node
+export num_workers_per_node=${3:-2}  # Default workers per node
 export num_inter_threads=${4:-2} # Default to 2 inter_op threads
 
 export physical_cores=`lscpu | grep "Core(s) per socket" | cut -d':' -f2 | sed "s/ //g"` # Total number of physical cores per socket
@@ -32,5 +32,5 @@ echo "Running $num_workers_per_node worker(s)/node on $num_nodes nodes..."
 echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
-#mpirun --mca oob_tcp_if_include eth0 --mca btl_tcp_if_include eth0 -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
-mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
+mpirun --mca btl_tcp_if_include eth0  -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
+#mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads

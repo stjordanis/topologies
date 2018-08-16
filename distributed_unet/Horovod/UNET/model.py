@@ -31,7 +31,7 @@ def dice_coef(y_true, y_pred, smooth=1.0):
    return tf.reduce_mean(coef)
 
 
-def dice_coef_loss(y_true, y_pred, smooth=1.):
+def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
 	intersection = tf.reduce_sum(y_true * y_pred)
 	union_set = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred)
@@ -164,6 +164,7 @@ def define_model(input_shape, output_shape, FLAGS):
     model["label"] = msks
     model["output"] = predictionMask
     model["loss"] = dice_coef_loss(msks, predictionMask)
+
     model["metric_dice"] = dice_coef(msks, predictionMask)
 
     model["metric_sensitivity"] = sensitivity(msks, predictionMask)
@@ -195,3 +196,20 @@ def define_model(input_shape, output_shape, FLAGS):
     summary_op = tf.summary.merge_all()
 
     return model
+
+
+def validate_model(mon_sess, model, imgs_test, msks_test):
+    """
+    Code for model validation on test set
+    """
+    test_dice, test_sens, test_spec = mon_sess.run(
+                 [model["metric_dice_test"],
+                 model["metric_sensitivity_test"],
+                 model["metric_specificity_test"]],
+                 feed_dict={model["input"]: imgs_test,
+                 model["label"]: msks_test})
+
+    tf.logging.info("VALIDATION METRICS: Test Dice = {:.4f}, "
+                    "Test Sensitivity = {:.4f}, "
+                    "Test Specificity = {:.4f}".format(test_dice,
+                    test_sens, test_spec))

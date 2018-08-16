@@ -185,7 +185,7 @@ def unet_model(img_height=224,
 
     # Transposed convolution parameters
     params_trans = dict(data_format=data_format,
-                        kernel_size=(2, 2), strides=(2, 2),
+                        kernel_size=(3, 3), strides=(2, 2),
                         padding="same")
 
     conv1 = K.layers.Conv2D(name="conv1a", filters=32, **params)(inputs)
@@ -255,6 +255,13 @@ def unet_model(img_height=224,
                                  filters=num_chan_out, kernel_size=(1, 1),
                                  data_format=data_format,
                                  activation="sigmoid")(conv9)
+
+
+    tf.summary.image("predictions", prediction, max_outputs=3)
+    #tf.summary.image("ground_truth", msks, max_outputs=3)
+    #tf.summary.image("images", inputs, max_outputs=3)
+
+    #summary_op = tf.summary.merge_all()
 
     model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
@@ -326,12 +333,12 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/upsampling_{}".format(args.logdir,
                                                       batch_size, directoryName),
-            write_graph=True, write_images=True)
+            write_graph=True)
     else:
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir="{}/batch{}/transposed_{}".format(args.logdir,
                                                       batch_size, directoryName),
-            write_graph=True, write_images=True)
+            write_graph=True)
 
     print("-" * 30)
     print("Fitting model...")
@@ -353,11 +360,17 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     callbacks.append(model_checkpoint)
     callbacks.append(tensorboard_checkpoint)
 
-    history = model.fit_generator(train_generator,
-                                  steps_per_epoch=len(imgs_train)//batch_size,
-                                  epochs=n_epoch,
-                                  validation_data=(imgs_test, msks_test),
-                                  callbacks=callbacks)
+    # history = model.fit_generator(train_generator,
+    #                               steps_per_epoch=len(imgs_train)//batch_size,
+    #                               epochs=n_epoch,
+    #                               validation_data=(imgs_test, msks_test),
+    #                               callbacks=callbacks)
+
+    history = model.fit(imgs_train, msks_train,
+                        epochs=n_epoch,
+                        batch_size=args.batch_size,
+                        validation_data=(imgs_test, msks_test),
+                        callbacks=callbacks)
 
     if args.trace:
         """
