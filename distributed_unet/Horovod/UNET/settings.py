@@ -20,8 +20,8 @@
 
 import os
 
-BASE = "/home/nfsshare/"
-OUT_PATH = os.path.join(BASE, "unet")
+DATA_PATH = os.environ.get('data_path', "/home/nfsshare/unet")
+OUTPUT_PATH = os.environ.get('output_path', "/home/nfsshare/unet")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128

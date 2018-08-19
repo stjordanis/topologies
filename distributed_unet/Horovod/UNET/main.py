@@ -50,9 +50,15 @@ tf.app.flags.DEFINE_integer("log_steps", 5,
 
 tf.app.flags.DEFINE_integer("batch_size", settings.BATCH_SIZE,
                             "Batch Size for Training")
-tf.app.flags.DEFINE_string("logdir",
-                            os.path.join(settings.OUT_PATH, "checkpoints"),
-                            "Log directory")
+
+tf.app.flags.DEFINE_string("output_path",
+                            settings.OUTPUT_PATH,
+                            "Output log directory")
+
+tf.app.flags.DEFINE_string("data_path",
+                            settings.DATA_PATH,
+                            "Data directory")
+
 tf.app.flags.DEFINE_boolean("no_horovod", False,
                             "Don't use Horovod. Single node training only.")
 tf.app.flags.DEFINE_float("learningrate", settings.LEARNING_RATE,
@@ -166,14 +172,14 @@ def main(_):
         # Horovod: save checkpoints only on worker 0 to prevent other workers from
         # corrupting them.
         if hvd.rank() == 0:
-            checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
+            checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.output_path,
                             hvd.size(),
                             datetime.now().strftime("%Y%m%d-%H%M%S"))
         else:
             checkpoint_dir = None
 
     else:
-        checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.logdir,
+        checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.output_path,
                         datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     # The MonitoredTrainingSession takes care of session initialization,
