@@ -29,7 +29,7 @@ def load_datasets(FLAGS):
     print("-"*42)
     print("Loading and preprocessing training data...")
     print("-"*42)
-    imgs_train, msks_train = load_data(settings.OUT_PATH,"_train")
+    imgs_train, msks_train = load_data(FLAGS.data_path,"_train")
     imgs_train, msks_train = update_channels(imgs_train, msks_train,
                                              settings.NUM_IN_CHANNELS,
                                              settings.NUM_OUT_CHANNELS,
@@ -39,7 +39,7 @@ def load_datasets(FLAGS):
     print("-"*38)
     print("Loading and preprocessing test data...")
     print("-"*38)
-    imgs_test, msks_test = load_data(settings.OUT_PATH,"_test")
+    imgs_test, msks_test = load_data(FLAGS.data_path,"_test")
     imgs_test, msks_test = update_channels(imgs_test, msks_test,
                                            settings.NUM_IN_CHANNELS,
                                            settings.NUM_OUT_CHANNELS,
