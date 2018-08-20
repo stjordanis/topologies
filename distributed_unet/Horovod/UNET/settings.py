@@ -40,9 +40,6 @@ PRINT_MODEL = False
 MODE = 1  # 1, 2, or 3
 
 BLOCKTIME = 0
-NUM_INTER_THREADS = 2
-# Total number of physical cores across all sockets
-NUM_INTRA_THREADS = 72
 
 CHANNELS_FIRST = False
 USE_KERAS_API = True

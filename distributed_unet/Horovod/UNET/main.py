@@ -39,6 +39,7 @@ import settings
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer("num_inter_threads", 2,
                             "# inter op threads")
+
 tf.app.flags.DEFINE_integer("num_threads", psutil.cpu_count(logical=True),
                             "# intra op threads")
 
