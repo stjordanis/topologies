@@ -45,11 +45,11 @@ tf.app.flags.DEFINE_integer("log_steps", 20,
 tf.app.flags.DEFINE_integer("batch_size", 128,
 							"Batch Size for Training")
 
-tf.app.flags.DEFINE_string("output_path", "./mnist_output/",
+tf.app.flags.DEFINE_string("output_path", "/home/nfsshare/unet/checkpoints",
                             "Output log directory")
 
 tf.app.flags.DEFINE_string("data_path",
-                            "./MNIST_data/",
+                            "/home/nfsshare/unet",
                             "Data directory")
 
 tf.app.flags.DEFINE_boolean("no_horovod", False,
