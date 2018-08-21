@@ -32,7 +32,13 @@ echo nodes are: `cat $node_ips`
 
 # Training input data path and output paths
 export data_path='/home/nfsshare/unet'
-export output_path='/home/nfsshare/unet'
+export output_path='/home/nfsshare/unet/checkpoints'
 
-mpirun  --mca btl_tcp_if_include eth0 -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker_mnist.sh $logdir $ppr $num_inter_threads
+mpirun  --mca btl_tcp_if_include eth0 \
+-np $num_processes \
+-H `cat $node_ips` \
+--map-by socket \
+-cpus-per-proc $physical_cores \
+--report-bindings \
+--oversubscribe bash exec_multiworker_mnist.sh $ppr $num_inter_threads $data_path $output_path
 #mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker_mnist.sh $ppr $num_inter_threads $data_path $output_path
