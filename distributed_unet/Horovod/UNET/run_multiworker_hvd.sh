@@ -27,10 +27,20 @@ export num_processes=$(( $num_nodes * $num_workers_per_node )) # Total number of
 export ppr=$(( $num_workers_per_node / $num_sockets ))
 export pe=$(( $physical_cores / $ppr ))
 
+# Training input data path and output paths
+export data_path='/home/nfsshare/unet'
+export output_path='/home/nfsshare/unet'
+
 echo "Running $num_workers_per_node worker(s)/node on $num_nodes nodes..."
 
 echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
-mpirun --mca btl_tcp_if_include eth0  -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads
+mpirun --mca btl_tcp_if_include eth0  -np $num_processes \
+-H `cat $node_ips` \
+--map-by socket \
+-cpus-per-proc $physical_cores \
+--report-bindings \
+--oversubscribe bash exec_multiworker.sh $ppr $num_inter_threads $data_path $output_path
+
 #mpirun -np $num_processes -H `cat $node_ips` --map-by socket -cpus-per-proc $physical_cores --report-bindings --oversubscribe bash exec_multiworker.sh $logdir $ppr $num_inter_threads

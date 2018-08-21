@@ -20,11 +20,16 @@
 
 import os
 
-DATA_PATH = os.environ.get('data_path', "/home/nfsshare/unet")
-OUTPUT_PATH = os.environ.get('output_path', "/home/nfsshare/unet")
+BASE = "/mnt/data/medical/brats/all_slices/"
+OUT_PATH = os.path.join(BASE, "Results/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
+CROP_LENX = 8*2   # Must be a multiple of 8
+CROP_LENY = 8*2  # Must be a multiple of 8
+CROP_OFFSETX = 0
+CROP_OFFSETY = 0
+
 
 NUM_IN_CHANNELS = 1
 NUM_OUT_CHANNELS = 1
@@ -40,8 +45,11 @@ PRINT_MODEL = False
 MODE = 1  # 1, 2, or 3
 
 BLOCKTIME = 0
+NUM_INTER_THREADS = 2
+# Total number of physical cores across all sockets
+NUM_INTRA_THREADS = 72
 
 CHANNELS_FIRST = False
 USE_KERAS_API = True
-USE_UPSAMPLING = False
+USE_UPSAMPLING = True
 CREATE_TRACE_TIMELINE = False
