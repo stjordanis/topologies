@@ -1,2 +1,2 @@
-aipg-infr-07,aipg-infr-08,aipg-infr-09,aipg-infr-10
+aipg-infr-08,aipg-infr-10
 

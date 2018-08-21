@@ -44,8 +44,14 @@ tf.app.flags.DEFINE_integer("log_steps", 20,
 							"Number of steps between logs")
 tf.app.flags.DEFINE_integer("batch_size", 128,
 							"Batch Size for Training")
-tf.app.flags.DEFINE_string("logdir", "checkpoints_mnist",
-							"Log directory")
+
+tf.app.flags.DEFINE_string("output_path", "/home/nfsshare/unet/checkpoints",
+                            "Output log directory")
+
+tf.app.flags.DEFINE_string("data_path",
+                            "/home/nfsshare/unet",
+                            "Data directory")
+
 tf.app.flags.DEFINE_boolean("no_horovod", False,
 							"Don't use Horovod. Single node training only.")
 tf.app.flags.DEFINE_float("learningrate", 0.001,
@@ -145,7 +151,7 @@ def main(_):
 		hvd.init()
 
 	# Download MNIST dataset.
-	mnist = input_data.read_data_sets("MNIST_data/", one_hot=False)
+	mnist = input_data.read_data_sets(FLAGS.data_path, one_hot=False)
 
 	# Input tensors
 	with tf.name_scope("input"):
@@ -215,14 +221,14 @@ def main(_):
 		# Horovod: save checkpoints only on worker 0 to prevent other workers from
 		# corrupting them.
 		if hvd.rank() == 0:
-			checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.logdir,
+			checkpoint_dir = "{}/{}-workers/{}".format(FLAGS.output_path,
 							hvd.size(),
 							datetime.now().strftime("%Y%m%d-%H%M%S"))
 		else:
 			checkpoint_dir = None
 
 	else:
-		checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.logdir,
+		checkpoint_dir = "{}/no_hvd/{}".format(FLAGS.output_path,
 						datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 	# The MonitoredTrainingSession takes care of session initialization,
