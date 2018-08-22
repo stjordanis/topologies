@@ -9,29 +9,30 @@ import h5py
 import argparse
 
 parser = argparse.ArgumentParser(
-	           description="Convert Medicathlon data "
+               description="Convert Medicathlon data "
                "(http://medicaldecathlon.com/) "
                "files to HDF5 data file",
                add_help=True)
 
 parser.add_argument("--data_dir",
-					default=os.path.join("/mnt/data/medical/decathlon/",
+                    default=os.path.join("/mnt/data/medical/decathlon/",
                                          "Task01_BrainTumour/"),
-					help="Root directory for the Medicathlon data files")
+                    help="Root directory for the Medicathlon data files")
 
 parser.add_argument("--save_dir",
-					default=os.path.join(".", "decathlon_brain"),
-					help="Directory to save HDF5 data files")
+                    default=os.path.join("/mnt/data/medical/decathlon/",
+                                         "Task01_BrainTumour/",
+                                         "decathlon_brain"),
+                    help="Directory to save HDF5 data files")
 
-parser.add_argument("--save_name", default="brain.h5",
-					help="HDF5 file name")
+parser.add_argument("--save_filename",
+                    default=os.path.join("brain.h5"),
+                    help="Save filename")
+
+parser.add_argument("--split_ratio", type=int, default=0.85,
+                    help="Split ratio train/test")
 
 args = parser.parse_args()
-
-"""
-Choose between train and test dataset
-"""
-dataset = "Train"   # OR Test
 
 def transform_mask_channels(msk):
     """
@@ -39,28 +40,24 @@ def transform_mask_channels(msk):
     Otherwise, the value is the class ID for the mask.
     """
     newMsk = np.zeros(list(np.shape(msk))+[4])
-
     for classId in [1, 2, 3]:
          idx, idy, idz = np.where(msk==classId)
          for i in range(len(idx)):
              newMsk[idx[i],idy[i],idz[i],classId] = 1.0
 
-    return newMsk
+    return np.rot90(newMsk)
 
 def normalize_img(img):
+    """
+    Normalize images between 0 and 1
+    """
 
     for idx in range(img.shape[3]):
         img[:,:,:,idx] = img[:,:,:,idx] / np.max(img[:,:,:,idx])
-    return img
 
-def convert_files(dataDir, saveDir, isTrain):
+    return np.rot90(img)
 
-    if isTrain:  # Work on training set
-        appendDir = "Tr"
-        appendSave = "train"
-    else:
-        appendDir = "Ts"  # Work on testing set
-        appendSave = "test"
+def convert_files(dataDir, saveDir, saveFileName, split_ratio):
 
     """
     Find filenames for Medicathlon data.
@@ -74,23 +71,24 @@ def convert_files(dataDir, saveDir, isTrain):
 
     """
     imgFileNames = glob.glob(os.path.join(dataDir,
-                             "images{}".format(appendDir),
+                             "imagesTr",
                              "BRATS*.nii.gz"))
-    mskFileNames = [filename.replace("images{}".format(appendDir),
-                    "labels{}".format(appendDir))
+    mskFileNames = [filename.replace("imagesTr", "labelsTr")
                     for filename in imgFileNames]
 
     fileNames = np.array([imgFileNames, mskFileNames])
 
-    image_file = nib.load(fileNames[0,0])
-    mask_file = nib.load(fileNames[1,0])
+    """
+    First train image/mask
+    """
+    imgfilename = nib.load(fileNames[0,0])
+    image_array = normalize_img(imgfilename.get_data())
 
-    image_array = normalize_img(image_file.get_data())
-    mask_array = mask_file.get_data()
+    mskfilename = nib.load(fileNames[1,0])
+    mask_array = transform_mask_channels(mskfilename.get_data())
 
     shapeImage = image_array.shape
     shapeMask = mask_array.shape
-    okFiles = 1
 
     maxshapeImage = (shapeImage[0],shapeImage[1],None,shapeImage[3])
     maxshapeMask = (shapeImage[0], shapeImage[1], None, 4)
@@ -98,30 +96,52 @@ def convert_files(dataDir, saveDir, isTrain):
     import pathlib
     pathlib.Path(args.save_dir).mkdir(parents=True, exist_ok=True)
 
-    print("Saving HDF5 file to: {}".format(os.path.join(args.save_dir,
-                appendSave,
-                args.save_name)))
+    saveFileName = os.path.join(saveDir, saveFileName)
+    print("Saving HDF5 file to: {}".format(saveFileName))
 
-    hdfFile = h5py.File(os.path.join(args.save_dir, args.save_name), "w-")
-    imgStack = hdfFile.create_dataset("images",
+    hdfFile = h5py.File(saveFileName, "w-")
+    imgStackTrain = hdfFile.create_dataset("images/train",
                                       data=image_array,
                                       dtype=float,
                                       maxshape=maxshapeImage)
-    mskStack = hdfFile.create_dataset("masks",
-                                      data=transform_mask_channels(mask_array),
+    mskStackTrain = hdfFile.create_dataset("masks/train",
+                                      data=mask_array,
+                                      dtype=float,
+                                      maxshape=maxshapeMask)
+
+    """
+    First test image/mask
+    """
+    imgfilename = nib.load(fileNames[0,1])
+    image_array = normalize_img(imgfilename.get_data())
+
+    mskfilename = nib.load(fileNames[1,1])
+    mask_array = transform_mask_channels(mskfilename.get_data())
+
+    shapeImage = image_array.shape
+    shapeMask = mask_array.shape
+
+    maxshapeImage = (shapeImage[0],shapeImage[1],None,shapeImage[3])
+    maxshapeMask = (shapeImage[0], shapeImage[1], None, 4)
+
+    imgStackTest = hdfFile.create_dataset("images/test",
+                                      data=image_array,
+                                      dtype=float,
+                                      maxshape=maxshapeImage)
+    mskStackTest = hdfFile.create_dataset("masks/test",
+                                      data=mask_array,
                                       dtype=float,
                                       maxshape=maxshapeMask)
 
     """
     Go through remaining files in directory and append to stack
     """
-    for idx in tqdm(range(1,fileNames.shape[1])):
+    for idx in tqdm(range(2,fileNames.shape[1])):
 
-        image_file = nib.load(fileNames[0,idx])
-        mask_file = nib.load(fileNames[1,idx])
-
-        image_array = normalize_img(image_file.get_data())
-        mask_array = mask_file.get_data()
+        imgfilename = nib.load(fileNames[0,idx])
+        image_array = normalize_img(imgfilename.get_data())
+        mskfilename = nib.load(fileNames[1,idx])
+        mask_array = transform_mask_channels(mskfilename.get_data())
 
         # Assert that the array shape doesn't change.
         # Otherwise, dstack won't work
@@ -129,20 +149,40 @@ def convert_files(dataDir, saveDir, isTrain):
             "File {}: Mismatch shape {}".format(fileNames[0,idx],
             image_array.shape)
 
-        row = imgStack.shape[2]
-        extent = image_array.shape[2]
-        imgStack.resize(row+extent, axis=2) # Add new image
-        imgStack[:,:,row:(row+extent),:] = image_array
+        if (np.random.rand() < split_ratio):
 
-        ow = mskStack.shape[2]
-        extent = mask_array.shape[2]
-        mskStack.resize(row+extent, axis=2) # Add new mask
-        mskStack[:,:,row:(row+extent),:] = transform_mask_channels(mask_array)
+            """
+            Train cases
+            """
+            row = imgStackTrain.shape[2]
+            extent = image_array.shape[2]
+            imgStackTrain.resize(row+extent, axis=2) # Add new image
+            imgStackTrain[:,:,row:(row+extent),:] = image_array
 
-    imgStack.attrs["lshape"] = np.shape(imgStack)
-    imgStack.attrs["type"] = appendSave
-    mskStack.attrs["lshape"] = np.shape(mskStack)
-    mskStack.attrs["type"] = appendSave
+            row = mskStackTrain.shape[2]
+            extent = mask_array.shape[2]
+            mskStackTrain.resize(row+extent, axis=2) # Add new mask
+            mskStackTrain[:,:,row:(row+extent),:] = mask_array
+
+        else:
+
+            """
+            Test cases
+            """
+            row = imgStackTest.shape[2]
+            extent = image_array.shape[2]
+            imgStackTest.resize(row+extent, axis=2) # Add new image
+            imgStackTest[:,:,row:(row+extent),:] = image_array
+
+            row = mskStackTest.shape[2]
+            extent = mask_array.shape[2]
+            mskStackTest.resize(row+extent, axis=2) # Add new mask
+            mskStackTest[:,:,row:(row+extent),:] = mask_array
+
+    imgStackTrain.attrs["lshape"] = np.shape(imgStackTrain)
+    mskStackTrain.attrs["lshape"] = np.shape(mskStackTrain)
+    imgStackTest.attrs["lshape"] = np.shape(imgStackTest)
+    mskStackTest.attrs["lshape"] = np.shape(mskStackTest)
 
 if __name__ == "__main__":
 
@@ -152,8 +192,5 @@ if __name__ == "__main__":
     print("Looking for decathlon files in: {}".format(args.data_dir))
     print("\nConverting the training files.")
     # Convert the training data
-    convert_files(args.data_dir, args.save_dir, True)
-
-    print("Converting the testing files.")
-    # Convert the testing data
-    convert_files(args.data_dir, args.save_dir, False)
+    convert_files(args.data_dir, args.save_dir,
+                  args.save_filename, args.split_ratio)
