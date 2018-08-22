@@ -12,13 +12,11 @@ parser = argparse.ArgumentParser(
                add_help=True)
 
 parser.add_argument("--data_dir",
-					type = string,
 					default=os.path.join("/mnt/data/medical/decathlon/",
                                          "Task01_BrainTumour/"),
 					help="Root directory for the Medicathlon data files")
 
 parser.add_argument("--save_dir",
-					type = string,
 					default=os.path.join(".", "decathlon_brain"),
 					help="Directory to save Numpy data files")
 
@@ -84,7 +82,7 @@ def convert_files(dataDir, saveDir, isTrain):
 
         # Assert that the array shape doesn't change.
         # Otherwise, dstack won't work
-        assert(image_array.shape == shapeImage),
+        assert(image_array.shape == shapeImage), \
             "File {}: Mismatch shape {}".format(fileNames[0,idx],
             image_array.shape)
 
@@ -109,6 +107,7 @@ def convert_files(dataDir, saveDir, isTrain):
     import pathlib
     pathlib.Path(saveDir).mkdir(parents=True, exist_ok=False)
 
+    print("Saving data arrays to Numpy. Please wait...")
     np.save("{}/imgs_{}.npy".format(saveDir, appendSave), imgStack)
     print("Saved file ".format("{}/imgs_{}.npy".format(saveDir, appendSave)))
     np.save("{}/msks_{}.npy".format(saveDir, appendSave), newMaskStack)
