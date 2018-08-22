@@ -116,7 +116,11 @@ def convert_files(dataDir, saveDir, isTrain):
 
 if __name__ == "__main__":
 
-    print("Converting the training files.")
+    print("\n\n\nConverting Medical Decathlon raw files to Numpy data files.")
+    print("http://medicaldecathlon.com/")
+    print("Looking for decathlon files in: {}".format(args.data_dir))
+    print("Saving numpy files in: {}".format(args.save_dir))
+    print("\nConverting the training files.")
     # Convert the training data
     convert_files(args.data_dir, args.save_dir, True)
 
