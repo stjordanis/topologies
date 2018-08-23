@@ -62,6 +62,12 @@ def update_channels(imgs, msks, input_no=3, output_no=3, mode=1, crop=False):
         new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
             msks[:, :, :, 2]+msks[:, :, :, 3]
 
+    elif mode == 5:
+        # Entire tumor (all 4 modalities combined)
+        new_imgs[:, :, :, :] = imgs[:, :, :, :]
+        new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
+            msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
+
     else:
         print(
             "Error mode must be 1, 2, or 3 for entire tumor, active tumor, or active core")
