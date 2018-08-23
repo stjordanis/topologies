@@ -116,7 +116,8 @@ def stack_img_slices(mode_track, stack_order):
             current_slice.append(mode_track[mode][slice, :, :])
         full_brain.append(np.dstack(current_slice))
 
-    # Normalize stacked images (inference will not work if this is not performed)
+    # Normalize stacked images (inference will not work if
+    #  this is not performed)
     stack = np.asarray(full_brain)
     stack = (stack - np.mean(stack))/(np.std(stack))
 
@@ -238,15 +239,17 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
         scan_count += 1
         imgs_all.extend(np.asarray(stack_img_slices(mode_track, img_modes)))
 
-        # if (scan_count % args.save_interval == 0) & \
-        #     (scan_count != 0) & (len(imgs_all) > 0) & \
-        #     (len(msks_all) > 0):
-        #     #print("Total scans processed: {}".format(scan_count))
-        #     save_data(imgs_all, msks_all, args.split, args.save_path)
-        #     imgs_all = []
-        #     msks_all = []
+        if (scan_count % args.save_interval == 0) & \
+            (scan_count != 0) & (len(imgs_all) > 0) & \
+            (len(msks_all) > 0):
+            #print("Total scans processed: {}".format(scan_count))
+            save_data(imgs_all, msks_all, args.split, args.save_path)
+            imgs_all = []
+            msks_all = []
 
-# Save any leftover files - may miss a few at the end if the dataset size changes, this will catch those
+# Save any leftover files - may miss a few at the end if the dataset size
+#   changes, this will catch those
 if len(imgs_all) > 0:
+    print("Saving numpy files. This could take a while.")
     save_data(imgs_all, msks_all, args.split, args.save_path)
     print("Total scans processed: {}\nDone.".format(scan_count))
