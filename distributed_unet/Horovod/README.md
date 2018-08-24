@@ -19,6 +19,7 @@ SimpleITK
 opencv-python
 h5py
 tqdm
+keras
 horovod
 ```
 
