@@ -28,6 +28,8 @@ import psutil
 import settings    # Use the custom settings.py file for default parameters
 import argparse
 parser = argparse.ArgumentParser()
+parser.add_argument("--datadir", help="Location of imgs/msks_train/test.npy",
+                    default=settings.OUT_PATH)
 parser.add_argument("--use_upsampling",
                     help="use upsampling instead of transposed convolution",
                     action="store_true", default=settings.USE_UPSAMPLING)
@@ -452,7 +454,7 @@ if __name__ == "__main__":
     print("TensorFlow version: {}".format(tf.__version__))
     start_time = time.time()
 
-    train_and_predict(settings.OUT_PATH, settings.IMG_HEIGHT,
+    train_and_predict(args.datadir, settings.IMG_HEIGHT,
                       settings.IMG_WIDTH,
                       args.epochs, settings.NUM_IN_CHANNELS,
                       settings.NUM_OUT_CHANNELS,
