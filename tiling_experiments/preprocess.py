@@ -25,63 +25,69 @@ import settings
 
 
 def load_data(data_path, prefix="_train"):
-    imgs_train = np.load(os.path.join(data_path, "imgs"+prefix+".npy"),
-                         mmap_mode="r", allow_pickle=False)
-    msks_train = np.load(os.path.join(data_path, "msks"+prefix+".npy"),
-                         mmap_mode="r", allow_pickle=False)
-
-    return imgs_train, msks_train
+	imgs = np.load(os.path.join(data_path, "imgs"+prefix+".npy"),
+						 mmap_mode="r", allow_pickle=False)
+	msks = np.load(os.path.join(data_path, "msks"+prefix+".npy"),
+						 mmap_mode="r", allow_pickle=False)
 
 
-def update_channels(imgs, msks, input_no=3, output_no=3, mode=1, crop=False):
-    """
-    mode: int between 1-3
-    """
+	xlen = imgs.shape[1]  # X axis length
+	ylen = imgs.shape[2]  # Y axis length
+	xrange = np.arange(settings.CROP_LENX+settings.CROP_OFFSETX,
+				   xlen-settings.CROP_LENX+settings.CROP_OFFSETX)
+	yrange = np.arange(settings.CROP_LENY+settings.CROP_OFFSETY,
+				   ylen-settings.CROP_LENY+settings.CROP_OFFSETY)
+	cropped_imgs = imgs[:, xrange, :, :]
+	new_imgs = cropped_imgs[:, :, yrange, :]
+	cropped_msks = msks[:, xrange, :, :]
+	new_msks = cropped_msks[:, :, yrange, :]
 
-    imgs = imgs.astype("float32")
-    msks = msks.astype("float32")
+	imgs = new_imgs
+	msks = new_msks
 
-    shp = imgs.shape
-    new_imgs = np.zeros((shp[0], shp[1], shp[2], input_no))
-    new_msks = np.zeros((shp[0], shp[1], shp[2], output_no))
+	return imgs, msks
 
-    if mode == 1:
-        # Entire tumor (all 4 modalities combined)
-        new_imgs[:, :, :, 0] = imgs[:, :, :, 2]
-        new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
-            msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
 
-    elif mode == 2:
-        # Active tumor
-        new_imgs[:, :, :, 0] = imgs[:, :, :, 0]
-        new_msks[:, :, :, 0] = msks[:, :, :, 3]
+def update_channels(imgs, msks, args, crop=False):
+	"""
+	mode: int between 1-4
+	"""
 
-    elif mode == 3:
-        # Active core (necrosis, enchancing, non-enchancing)
-        new_imgs[:, :, :, 0] = imgs[:, :, :, 1]
-        new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
-            msks[:, :, :, 2]+msks[:, :, :, 3]
+	imgs = imgs.astype("float32")
+	msks = msks.astype("float32")
 
-    elif mode == 5:
-        # Entire tumor (all 4 modalities combined)
-        new_imgs[:, :, :, :] = imgs[:, :, :, :]
-        new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
-            msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
+	shp = imgs.shape
+	new_imgs = np.zeros((shp[0], shp[1], shp[2], args.num_input_channels))
+	new_msks = np.zeros((shp[0], shp[1], shp[2], args.num_output_channels))
 
-    else:
-        print(
-            "Error mode must be 1, 2, or 3 for entire tumor, active tumor, or active core")
+	if args.mode == 1:
+		# Entire tumor (all 4 modalities combined)
+		new_imgs[:, :, :, 0] = imgs[:, :, :, 2]
+		new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
+			msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
 
-    if crop:
-    	xlen = new_imgs.shape[1]  # X axis length
-    	ylen = new_imgs.shape[2]  # Y axis length
-    	xrange = np.arange(settings.CROP_LENX+settings.CROP_OFFSETX,
-                       xlen-settings.CROP_LENX+settings.CROP_OFFSETX)
-    	yrange = np.arange(settings.CROP_LENY+settings.CROP_OFFSETY,
-                       ylen-settings.CROP_LENY+settings.CROP_OFFSETY)
-    	cropped_imgs = new_imgs[:, xrange, :, :]
-    	new_imgs = cropped_imgs[:, :, yrange, :]
-    	cropped_msks = new_msks[:, xrange, :, :]
-    	new_msks = cropped_msks[:, :, yrange, :]
+	elif args.mode == 2:
+		# Active tumor
+		new_imgs[:, :, :, 0] = imgs[:, :, :, 0]
+		new_msks[:, :, :, 0] = msks[:, :, :, 3]
 
-    return new_imgs, new_msks
+	elif args.mode == 3:
+		# Active core (necrosis, enchancing, non-enchancing)
+		new_imgs[:, :, :, 0] = imgs[:, :, :, 1]
+		new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
+			msks[:, :, :, 2]+msks[:, :, :, 3]
+
+	elif args.mode == 4:
+		# Entire tumor (all 4 modalities combined)
+		# Use all input channels
+		new_imgs[:, :, :, :] = imgs[:, :, :, :]
+		new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
+			msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
+
+	else:
+		print(
+			"Error mode must be 1, 2, or 3, 4 for "
+			"entire tumor, active tumor, or active core")
+
+
+	return new_imgs, new_msks

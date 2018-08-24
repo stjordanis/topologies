@@ -61,12 +61,20 @@ parser.add_argument(
     action="store_true",
     default=settings.CREATE_TRACE_TIMELINE)
 
-parser.add_argument("--logdir", help="TensorBoard logs",
-                    action="store", default="./tensorboard")
+parser.add_argument("--out_path", help="TensorBoard logs",
+                    default=settings.OUT_PATH)
+parser.add_argument("--data_path", help="Data directory",
+                    default=settings.DATA_PATH)
+parser.add_argument("--mode", type=int, default=settings.MODE,
+                    help="Mode 1,2,3,4: entire tumor, active tumor, "
+                    "or active core")
+
+parser.add_argument("--num_input_channels", type=int, default=1,
+                    help="number of input channels")
+parser.add_argument("--num_output_channels", type=int, default=1,
+                    help="number of output channels")
 
 args = parser.parse_args()
-
-batch_size = args.batch_size
 
 import os
 
@@ -161,6 +169,9 @@ def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
 
 def unet_model(dropout=0.2, final=False):
+    """
+    U-Net model definition
+    """
 
     if args.use_upsampling:
         print("Using UpSampling2D")
@@ -168,9 +179,11 @@ def unet_model(dropout=0.2, final=False):
         print("Using Transposed Deconvolution")
 
     if args.channels_first:
-    	inputs = K.layers.Input((settings.NUM_IN_CHANNELS,None,None), name="Images")
+    	inputs = K.layers.Input((args.num_input_channels,None,None),
+                                name="Images")
     else:
-        inputs = K.layers.Input((None,None,settings.NUM_IN_CHANNELS), name="Images")
+        inputs = K.layers.Input((None,None,args.num_input_channels),
+                                name="Images")
 
     # Convolution parameters
     params = dict(kernel_size=(3, 3), activation="relu",
@@ -245,17 +258,15 @@ def unet_model(dropout=0.2, final=False):
     conv9 = K.layers.Conv2D(name="conv9a", filters=32, **params)(up9)
     conv9 = K.layers.Conv2D(name="conv9b", filters=32, **params)(conv9)
 
+    num_output_channels = 1
     prediction = K.layers.Conv2D(name="PredictionMask",
-                                 filters=settings.NUM_OUT_CHANNELS, kernel_size=(1, 1),
+                                 filters=num_output_channels,
+                                 kernel_size=(1, 1),
                                  data_format=data_format,
                                  activation="sigmoid")(conv9)
 
 
     tf.summary.image("predictions", prediction, max_outputs=3)
-    #tf.summary.image("ground_truth", msks, max_outputs=3)
-    #tf.summary.image("images", inputs, max_outputs=3)
-
-    #summary_op = tf.summary.merge_all()
 
     model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
@@ -289,23 +300,22 @@ def get_batch(imgs, msks, batch_size):
         yield imgs[idx], msks[idx]
 
 
-def train_and_predict(data_path, img_height, img_width, n_epoch,
-                      input_no=3, output_no=3, mode=1):
+def train_and_predict(args):
 
     print("-" * 40)
     print("Loading and preprocessing train data...")
     print("-" * 40)
 
-    imgs_train, msks_train = load_data(data_path, "_train")
-    imgs_train, msks_train = update_channels(imgs_train, msks_train,
-                                             input_no, output_no, mode, crop=True)
+    imgs_train, msks_train = load_data(args.data_path, "_train")
+    imgs_train, msks_train = update_channels(imgs_train, msks_train, args,
+                                             crop=True)
 
     print("-" * 40)
     print("Loading and preprocessing test data...")
     print("-" * 40)
-    imgs_test, msks_test = load_data(data_path, "_test")
-    imgs_test, msks_test = update_channels(imgs_test, msks_test,
-                                           input_no, output_no, mode, crop=False)
+    imgs_test, msks_test = load_data(args.data_path, "_test")
+    imgs_test, msks_test = update_channels(imgs_test, msks_test, args,
+                                           crop=False)
 
     print("Train images shape = {}".format(imgs_train.shape))
     print("Train masks shape = {}".format(msks_train.shape))
@@ -319,9 +329,13 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
     model = unet_model()
 
     if (args.use_upsampling):
-        model_fn = os.path.join(data_path, "unet_model_upsampling_CROPPEDX{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
+        model_fn = os.path.join(args.out_path,
+            "unet_model_upsampling_CROPPEDX"
+            "{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
     else:
-        model_fn = os.path.join(data_path, "unet_model_transposed_CROPPEDX{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
+        model_fn = os.path.join(args.out_path,
+            "unet_model_transposed_CROPPEDX"
+            "{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
 
     print("Writing model to '{}'".format(model_fn))
 
@@ -335,13 +349,15 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
     if (args.use_upsampling):
         tensorboard_checkpoint = K.callbacks.TensorBoard(
-            log_dir="{}/batch{}/upsampling_{}".format(args.logdir,
-                                                      batch_size, directoryName),
+            log_dir="{}/batch{}/upsampling_{}".format(args.out_path,
+                                                      args.batch_size,
+                                                      directoryName),
             write_graph=True)
     else:
         tensorboard_checkpoint = K.callbacks.TensorBoard(
-            log_dir="{}/batch{}/transposed_{}".format(args.logdir,
-                                                      batch_size, directoryName),
+            log_dir="{}/batch{}/transposed_{}".format(args.out_path,
+                                                      args.batch_size,
+                                                      directoryName),
             write_graph=True)
 
     print("-" * 30)
@@ -350,28 +366,22 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
 
     history = K.callbacks.History()
 
-    print("Batch size = {}".format(batch_size))
+    print("Batch size = {}".format(args.batch_size))
     if args.channels_first:  # Swap first and last axes on data
         imgs_train = np.swapaxes(imgs_train, 1, -1)
         msks_train = np.swapaxes(msks_train, 1, -1)
         imgs_test = np.swapaxes(imgs_test, 1, -1)
         msks_test = np.swapaxes(msks_test, 1, -1)
 
-    train_generator = get_batch(imgs_train, msks_train, batch_size)
+    # train_generator = get_batch(imgs_train, msks_train, batch_size)
 
     callbacks = []
 
     callbacks.append(model_checkpoint)
     callbacks.append(tensorboard_checkpoint)
 
-    # history = model.fit_generator(train_generator,
-    #                               steps_per_epoch=len(imgs_train)//batch_size,
-    #                               epochs=n_epoch,
-    #                               validation_data=(imgs_test, msks_test),
-    #                               callbacks=callbacks)
-
     history = model.fit(imgs_train, msks_train,
-                        epochs=n_epoch,
+                        epochs=args.epochs,
                         batch_size=args.batch_size,
                         validation_data=(imgs_test, msks_test),
                         callbacks=callbacks)
@@ -439,11 +449,7 @@ if __name__ == "__main__":
     print("TensorFlow version: {}".format(tf.__version__))
     start_time = time.time()
 
-    train_and_predict(settings.OUT_PATH, settings.IMG_HEIGHT,
-                      settings.IMG_WIDTH,
-                      args.epochs, settings.NUM_IN_CHANNELS,
-                      settings.NUM_OUT_CHANNELS,
-                      settings.MODE)
+    train_and_predict(args)
 
     print(
         "Total time elapsed for program = {} seconds".format(

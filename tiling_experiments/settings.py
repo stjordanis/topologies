@@ -19,20 +19,16 @@
 #
 
 import os
+import psutil
 
-BASE = "/mnt/data/medical/brats/all_slices/"
-OUT_PATH = os.path.join(BASE, "Results/")
+BASE = "/mnt/data/medical/brats/"
+DATA_PATH = os.path.join(BASE, "BraTS2018/fullsize/")
+OUT_PATH = os.path.join("./output_logs/")
 
-IMG_HEIGHT = 128
-IMG_WIDTH = 128
-CROP_LENX = 8*2   # Must be a multiple of 8
-CROP_LENY = 8*2  # Must be a multiple of 8
+CROP_LENX = 8*7   # Must be a multiple of 8
+CROP_LENY = 8*7  # Must be a multiple of 8
 CROP_OFFSETX = 0
 CROP_OFFSETY = 0
-
-
-NUM_IN_CHANNELS = 1
-NUM_OUT_CHANNELS = 1
 
 EPOCHS = 10
 BATCH_SIZE = 128
@@ -47,7 +43,7 @@ MODE = 1  # 1, 2, or 3
 BLOCKTIME = 0
 NUM_INTER_THREADS = 2
 # Total number of physical cores across all sockets
-NUM_INTRA_THREADS = 72
+NUM_INTRA_THREADS = psutil.cpu_count(logical=False)
 
 CHANNELS_FIRST = False
 USE_KERAS_API = True
