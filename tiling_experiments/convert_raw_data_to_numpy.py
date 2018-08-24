@@ -33,10 +33,10 @@ parser = argparse.ArgumentParser(
                add_help=True)
 
 parser.add_argument("--data_path",
-                    default="/mnt/data/medical/Brats2018/MICCAI_Brats18_Data_Training",
+                    default="/mnt/data/medical/brats/Brats2018/MICCAI_BraTS_2018_Data_Training/",
                     help="Path to the raw BraTS datafiles")
 parser.add_argument("--save_path",
-                    default="/mnt/data/medical/Brats2018/",
+                    default="/mnt/data/medical/brats/Brats2018/",
                     help="Folder to save Numpy data files")
 parser.add_argument("--resize", type=int, default=128,
                     help="Resize height and width to this size. "
@@ -197,7 +197,7 @@ scan_count = 0
 
 # Preprocess the total files sizes
 sizecounter = 0
-for subdir, dir, files in tqdm(os.walk(args.data_path), unit="files"):
+for subdir, dir, files in os.walk(args.data_path):
     sizecounter += 1
 
 for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
