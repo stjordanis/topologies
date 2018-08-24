@@ -36,7 +36,7 @@ parser.add_argument("--data_path",
                     default="/mnt/data/medical/Brats2018/MICCAI_Brats18_Data_Training",
                     help="Path to the raw BraTS datafiles")
 parser.add_argument("--save_path",
-                    default="/mnt/data/medical/Brats2018/processed_numpy_datafiles/",
+                    default="/mnt/data/medical/Brats2018/",
                     help="Folder to save Numpy data files")
 parser.add_argument("--resize", type=int, default=128,
                     help="Resize height and width to this size. "
@@ -54,18 +54,20 @@ print("Converting BraTS raw Nifti data files to training and testing" \
         " Numpy data files.")
 print(args)
 
+save_dir = os.path.join(args.save_path, "{}x{}".format(args.resize))
+
 # Create directory
 try:
-    os.makedirs(args.save_path)
+    os.makedirs(save_dir)
 except OSError:
-    if not os.path.isdir(args.save_path):
+    if not os.path.isdir(save_dir):
         raise
 
 # Check for existing numpy train/test files
-check_dir = os.listdir(args.save_path)
+check_dir = os.listdir(save_dir)
 for item in check_dir:
     if item.endswith(".npy"):
-        os.remove(os.path.join(args.save_path, item))
+        os.remove(os.path.join(save_dir, item))
         print("Removed old version of {}".format(item))
 
 
@@ -245,7 +247,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
             (scan_count != 0) & (len(imgs_all) > 0) & \
             (len(msks_all) > 0):
             #print("Total scans processed: {}".format(scan_count))
-            save_data(imgs_all, msks_all, args.split, args.save_path)
+            save_data(imgs_all, msks_all, args.split, save_dir)
             imgs_all = []
             msks_all = []
 
@@ -253,5 +255,5 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 #   changes, this will catch those
 if len(imgs_all) > 0:
     print("Saving numpy files. This could take a while.")
-    save_data(imgs_all, msks_all, args.split, args.save_path)
+    save_data(imgs_all, msks_all, args.split, save_dir)
     print("Total scans processed: {}\nDone.".format(scan_count))
