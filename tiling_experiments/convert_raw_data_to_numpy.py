@@ -33,10 +33,10 @@ parser = argparse.ArgumentParser(
                add_help=True)
 
 parser.add_argument("--data_path",
-                    default="./MICCAI_BraTS17_Data_Training",
+                    default="/mnt/data/medical/Brats2018/MICCAI_Brats18_Data_Training",
                     help="Path to the raw BraTS datafiles")
 parser.add_argument("--save_path",
-                    default="./processed_numpy_datafiles/",
+                    default="/mnt/data/medical/Brats2018/processed_numpy_datafiles/",
                     help="Folder to save Numpy data files")
 parser.add_argument("--resize", type=int, default=128,
                     help="Resize height and width to this size. "
@@ -119,7 +119,9 @@ def stack_img_slices(mode_track, stack_order):
     # Normalize stacked images (inference will not work if
     #  this is not performed)
     stack = np.asarray(full_brain)
-    stack = (stack - np.mean(stack))/(np.std(stack))
+    #stack = (stack - np.mean(stack))/(np.std(stack))
+
+    stack = stack / np.max(stack)
 
     return stack
 
@@ -129,7 +131,7 @@ def resize_data(dataset, new_size):
     Test/Train images must be the same size
     """
 
-    start_index = (dataset.shape[1] - new_size)/2
+    start_index = (dataset.shape[1] - new_size)//2
     end_index = dataset.shape[1] - start_index
 
     if args.rotate != 0:
