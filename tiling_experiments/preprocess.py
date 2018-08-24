@@ -62,7 +62,7 @@ def update_channels(imgs, msks, args, crop=False):
 
 	if args.mode == 1:
 		# Entire tumor (all 4 modalities combined)
-		new_imgs[:, :, :, 0] = imgs[:, :, :, 2]
+		new_imgs[:, :, :, 0] = imgs[:, :, :, 2] / np.max(imgs[:, :, :, 2])
 		new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
 			msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
 
