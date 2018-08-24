@@ -21,14 +21,9 @@
 import os
 import psutil
 
-BASE = "/mnt/data/medical/brats/"
-DATA_PATH = os.path.join(BASE, "BraTS2018/fullsize/")
+BASE = "../../data/"
+DATA_PATH = os.path.join(BASE)
 OUT_PATH = os.path.join("./output_logs/")
-
-CROP_LENX = 8*7   # Must be a multiple of 8
-CROP_LENY = 8*7  # Must be a multiple of 8
-CROP_OFFSETX = 0
-CROP_OFFSETY = 0
 
 EPOCHS = 10
 BATCH_SIZE = 128

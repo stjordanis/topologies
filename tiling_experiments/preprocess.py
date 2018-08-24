@@ -30,25 +30,10 @@ def load_data(data_path, prefix="_train"):
 	msks = np.load(os.path.join(data_path, "msks"+prefix+".npy"),
 						 mmap_mode="r", allow_pickle=False)
 
-
-	xlen = imgs.shape[1]  # X axis length
-	ylen = imgs.shape[2]  # Y axis length
-	xrange = np.arange(settings.CROP_LENX+settings.CROP_OFFSETX,
-				   xlen-settings.CROP_LENX+settings.CROP_OFFSETX)
-	yrange = np.arange(settings.CROP_LENY+settings.CROP_OFFSETY,
-				   ylen-settings.CROP_LENY+settings.CROP_OFFSETY)
-	cropped_imgs = imgs[:, xrange, :, :]
-	new_imgs = cropped_imgs[:, :, yrange, :]
-	cropped_msks = msks[:, xrange, :, :]
-	new_msks = cropped_msks[:, :, yrange, :]
-
-	imgs = new_imgs
-	msks = new_msks
-
 	return imgs, msks
 
 
-def update_channels(imgs, msks, args, crop=False):
+def update_channels(imgs, msks, args):
 	"""
 	mode: int between 1-4
 	"""
@@ -62,7 +47,7 @@ def update_channels(imgs, msks, args, crop=False):
 
 	if args.mode == 1:
 		# Entire tumor (all 4 modalities combined)
-		new_imgs[:, :, :, 0] = imgs[:, :, :, 2] / np.max(imgs[:, :, :, 2])
+		new_imgs[:, :, :, 0] = imgs[:, :, :, 2]
 		new_msks[:, :, :, 0] = msks[:, :, :, 0] + \
 			msks[:, :, :, 1]+msks[:, :, :, 2]+msks[:, :, :, 3]
 

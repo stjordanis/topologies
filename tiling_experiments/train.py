@@ -168,7 +168,7 @@ def dice_coef_loss(y_true, y_pred, smooth=1.0):
     return loss
 
 
-def unet_model(dropout=0.2, final=False):
+def unet_model(args, dropout=0.2, final=False):
     """
     U-Net model definition
     """
@@ -273,6 +273,10 @@ def unet_model(dropout=0.2, final=False):
     optimizer = K.optimizers.Adam(lr=args.learningrate)
 
     if final:
+        """
+        Don't include custom metrics so that we can
+        easily reload the model into Keras.
+        """
         model.compile(optimizer=optimizer,
               loss="binary_crossentropy",
               metrics=["accuracy"])
@@ -307,15 +311,13 @@ def train_and_predict(args):
     print("-" * 40)
 
     imgs_train, msks_train = load_data(args.data_path, "_train")
-    imgs_train, msks_train = update_channels(imgs_train, msks_train, args,
-                                             crop=True)
+    imgs_train, msks_train = update_channels(imgs_train, msks_train, args)
 
     print("-" * 40)
     print("Loading and preprocessing test data...")
     print("-" * 40)
     imgs_test, msks_test = load_data(args.data_path, "_test")
-    imgs_test, msks_test = update_channels(imgs_test, msks_test, args,
-                                           crop=False)
+    imgs_test, msks_test = update_channels(imgs_test, msks_test, args)
 
     print("Train images shape = {}".format(imgs_train.shape))
     print("Train masks shape = {}".format(msks_train.shape))
@@ -326,16 +328,14 @@ def train_and_predict(args):
     print("Creating and compiling model...")
     print("-" * 30)
 
-    model = unet_model()
+    model = unet_model(args)
 
     if (args.use_upsampling):
         model_fn = os.path.join(args.out_path,
-            "unet_model_upsampling_CROPPEDX"
-            "{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
+                                "unet_model_upsampling.hdf5")
     else:
         model_fn = os.path.join(args.out_path,
-            "unet_model_transposed_CROPPEDX"
-            "{}_CROPPEDY{}.hdf5".format(settings.CROP_LENX,settings.CROP_LENY))
+                                "unet_model_transposed.hdf5")
 
     print("Writing model to '{}'".format(model_fn))
 
@@ -408,7 +408,7 @@ def train_and_predict(args):
 
     # Remove the Dice so that we can load without custom objects
     model.save_weights("weights.h5")
-    model = unet_model(final=True)  # Model without Dice and custom metrics
+    model = unet_model(args, final=True)  # Model without Dice and custom metrics
     model.load_weights("weights.h5")
     model.save(model_fn)
 
