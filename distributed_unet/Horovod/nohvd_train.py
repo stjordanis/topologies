@@ -137,7 +137,6 @@ import os
 from preprocess import *
 import settings
 
-
 def dice_coef(y_true, y_pred, smooth=1.0):
     intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
     union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
@@ -258,6 +257,8 @@ def unet_model(img_height=224,
 
 
     tf.summary.image("predictions", prediction, max_outputs=3)
+    tf.summary.merge_all()
+    
     #tf.summary.image("ground_truth", msks, max_outputs=3)
     #tf.summary.image("images", inputs, max_outputs=3)
 
@@ -340,11 +341,12 @@ def train_and_predict(data_path, img_height, img_width, n_epoch,
                                                       batch_size, directoryName),
             write_graph=True)
 
+
     print("-" * 30)
     print("Fitting model...")
     print("-" * 30)
 
-    history = K.callbacks.History()
+    #history = K.callbacks.History()
 
     print("Batch size = {}".format(batch_size))
     if args.channels_first:  # Swap first and last axes on data

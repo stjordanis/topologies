@@ -20,8 +20,8 @@
 
 import os
 
-BASE = "/home/nfsshare/"
-OUT_PATH = os.path.join(BASE, "unet/")
+BASE = "/home/bduser/tony/data"
+OUT_PATH = os.path.join(BASE, "Brats2017/temp_data")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
