@@ -34,7 +34,7 @@ echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
 mpirun --mca btl_tcp_if_include eth0  -np $num_processes \
--H `cat $node_ips` \
+-H `cat ${BASDIR}\${node_ips}` \
 --map-by socket \
 -cpus-per-proc $physical_cores \
 --report-bindings \
