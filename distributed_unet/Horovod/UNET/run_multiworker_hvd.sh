@@ -15,7 +15,7 @@ fi
 # Get the directory of this script
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-node_ips=${1:-hosts.txt}      # Default is the hosts.txt file
+node_ips=${1:-${BASEDIR}/hosts.txt}      # Default is the hosts.txt file
 export num_workers_per_node=${2:-2}  # Default workers per node
 export num_inter_threads=${3:-2} # Default to 2 inter_op threads
 
@@ -34,7 +34,7 @@ echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
 mpirun --mca btl_tcp_if_include eth0  -np $num_processes \
--H `cat ${BASDIR}\${node_ips}` \
+-H `cat $node_ips` \
 --map-by socket \
 -cpus-per-proc $physical_cores \
 --report-bindings \
