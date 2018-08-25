@@ -13,7 +13,7 @@ if [ "$1" == "-h" ]; then
 fi
 
 # Get the directory of this script
-BASEDIR=$(dirname "$0")
+BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 node_ips=${1:-hosts.txt}      # Default is the hosts.txt file
 export num_workers_per_node=${2:-2}  # Default workers per node
