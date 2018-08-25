@@ -20,8 +20,8 @@
 
 import os
 
-DATA_PATH = os.environ.get('data_path', "/home/cachefsshare/data/Brats2017/")
-OUTPUT_PATH = os.environ.get('output_path', "/home/cachefsshare/data/Brats2017/output/")
+DATA_PATH = os.environ.get('data_path', "/home/cachefsshare/unet/data/2017_dataset/")
+OUTPUT_PATH = os.environ.get('output_path', "/home/cachefsshare/unet/data/2017_dataset/output/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
