@@ -27,7 +27,7 @@ OUT_PATH = os.path.join("./output_logs/")
 
 EPOCHS = 15
 BATCH_SIZE = 128
-LEARNING_RATE = 0.0005
+LEARNING_RATE = 0.01
 PRINT_MODEL = False
 
 # Mode 1: Use flair to identify the entire tumor
