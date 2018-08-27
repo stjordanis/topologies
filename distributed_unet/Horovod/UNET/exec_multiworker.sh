@@ -9,7 +9,7 @@ export physical_cores=`lscpu | grep "Core(s) per socket" | cut -d':' -f2 | sed "
 export num_threads=$(( ${1} * $physical_cores )) # Total number of physical cores on this machine
 
 # Get the directory of this script
-BASEDIR=$(dirname "$0")
+BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 python ${BASEDIR}/main.py --num_inter_threads=${2} --num_threads=$num_threads
 
