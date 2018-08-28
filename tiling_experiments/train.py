@@ -147,24 +147,21 @@ import settings
 
 
 def dice_coef(y_true, y_pred, smooth=1.0):
-    intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
-    union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
-    numerator = tf.constant(2.) * intersection + smooth
-    denominator = union + smooth
-    coef = numerator / denominator
-    return tf.reduce_mean(coef)
+   intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
+   union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
+   numerator = tf.constant(2.) * intersection + smooth
+   denominator = union + smooth
+   coef = numerator / denominator
+   return tf.reduce_mean(coef)
 
 
 def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
-    y_true_f = K.backend.flatten(y_true)
-    y_pred_f = K.backend.flatten(y_pred)
-    intersection = K.backend.sum(y_true_f * y_pred_f)
-    loss = -K.backend.log(2.0 * intersection + smooth) + \
-        K.backend.log((K.backend.sum(y_true_f) +
-                       K.backend.sum(y_pred_f) + smooth))
-
-    return loss
+	intersection = tf.reduce_sum(y_true * y_pred)
+	union_set = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred)
+	loss = -tf.log(tf.constant(2.) * intersection + smooth) + \
+		tf.log(union_set + smooth)
+	return loss
 
 
 def unet_model(args, dropout=0.2, final=False):
