@@ -428,7 +428,7 @@ def train_and_predict(args):
 
     # Remove the Dice so that we can load without custom objects
     model.save_weights("weights.h5")
-    model = unet_model(args, final=False)  # Model without Dice and custom metrics
+    model = unet_model(args, final=True)  # Model without Dice and custom metrics
     model.load_weights("weights.h5")
     model.save(model_fn)
 
