@@ -157,7 +157,6 @@ def dice_coef(y_true, y_pred, smooth=1.0):
 
 def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
-    smooth *= args.batch_size
     y_true_f = K.backend.flatten(y_true)
     y_pred_f = K.backend.flatten(y_pred)
     intersection = K.backend.sum(y_true_f * y_pred_f)
