@@ -147,20 +147,17 @@ import settings
 
 
 def dice_coef(y_true, y_pred, smooth=1.0):
-   intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3))
-   union = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3))
-   numerator = tf.constant(2.) * intersection + smooth
-   denominator = union + smooth
+
+   numerator = tf.constant(2.) * tf.reduce_sum(y_true * y_pred, axis=(1, 2, 3)) + smooth
+   denominator = tf.reduce_sum(y_true + y_pred, axis=(1, 2, 3)) + smooth
    coef = numerator / denominator
    return tf.reduce_mean(coef)
 
 
 def dice_coef_loss(y_true, y_pred, smooth=1.0):
 
-	intersection = tf.reduce_sum(y_true * y_pred)
-	union_set = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred)
-	loss = -tf.log(tf.constant(2.) * intersection + smooth) + \
-		tf.log(union_set + smooth)
+	loss = -tf.log(tf.constant(2.) * tf.reduce_sum(y_true * y_pred) + smooth) + \
+		tf.log(tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + smooth)
 	return loss
 
 
@@ -169,8 +166,8 @@ def unet_model(args, dropout=0.2, final=False):
     U-Net model definition
     """
 
-    bn = True # Use Batch Normalization
-    
+    bn = False # Use Batch Normalization
+
     if args.use_upsampling:
         print("Using UpSampling2D")
     else:
@@ -313,11 +310,19 @@ def unet_model(args, dropout=0.2, final=False):
 
 def get_batch(imgs, msks, batch_size):
 
+    """
+    Grab a random set of images/masks. Take a random 128x128 crop from them.
+    """
+
     while True:
 
         idx = np.random.permutation(len(imgs))[:batch_size]
 
-        yield imgs[idx], msks[idx]
+        # Take random crop 128x128 from images
+        x = np.random.choice(240-128)
+        y = np.random.choice(240-128)
+
+        yield imgs[idx, x:(x+128), y:(y+128), :], msks[idx, x:(x+128), y:(y+128), :]
 
 
 def train_and_predict(args):
@@ -389,14 +394,20 @@ def train_and_predict(args):
         imgs_test = np.swapaxes(imgs_test, 1, -1)
         msks_test = np.swapaxes(msks_test, 1, -1)
 
-    # train_generator = get_batch(imgs_train, msks_train, batch_size)
+    train_generator = get_batch(imgs_train, msks_train, args.batch_size)
 
     callbacks = []
 
     callbacks.append(model_checkpoint)
     callbacks.append(tensorboard_checkpoint)
 
-    history = model.fit(imgs_train, msks_train,
+    # history = model.fit(imgs_train, msks_train,
+    #                     epochs=args.epochs,
+    #                     batch_size=args.batch_size,
+    #                     validation_data=(imgs_test, msks_test),
+    #                     callbacks=callbacks)
+
+    history = model.fit(train_generator,
                         epochs=args.epochs,
                         batch_size=args.batch_size,
                         validation_data=(imgs_test, msks_test),

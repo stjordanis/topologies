@@ -121,9 +121,9 @@ def stack_img_slices(mode_track, stack_order):
     # Normalize stacked images (inference will not work if
     #  this is not performed)
     stack = np.asarray(full_brain)
-    #stack = (stack - np.mean(stack))/(np.std(stack))
+    stack = (stack - np.mean(stack))/(np.std(stack))
 
-    stack = stack / np.max(stack)
+    #stack = stack / np.max(stack)
 
     return stack
 
