@@ -22,8 +22,11 @@ import os
 import psutil
 
 BASE = "../../data/Brats2018/240x240/"
+PATCH_HEIGHT = 128  # Train on this patch size
+PATCH_WIDTH = 128   # Train on this patch size
+
 DATA_PATH = os.path.join(BASE)
-OUT_PATH = os.path.join("./output_logs/")
+OUT_PATH = os.path.join("./model128x128_from_whole/")
 
 EPOCHS = 15
 BATCH_SIZE = 128

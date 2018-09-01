@@ -43,6 +43,9 @@ parser.add_argument(
     help="blocktime")
 parser.add_argument("--epochs", type=int, default=settings.EPOCHS,
                     help="number of epochs to train")
+parser.add_argument("--patchheight", type=int, default=settings.PATCH_HEIGHT, help="height of patch to train on")
+parser.add_argument("--patchwidth", type=int, default-settings.PATCH_WIDTH, help="width of patch to train on")
+
 parser.add_argument(
     "--learningrate",
     type=float,
@@ -320,10 +323,13 @@ def get_batch(imgs, msks, batch_size):
     x_len = imgs.shape[1]
     y_len = msks.shape[2]
 
-    # Take random crop 128x128 from images
-    patchx = 128
-    patchy = 128
+    # Take random crop from images
+    patchx = args.patchheight
+    patchy = args.patchwidth
 
+    assert (patchx <= x_len), "Patch is too wide"
+    assert (patchy <= y_len), "Patch to too tall"
+    
     imgs_batch = np.zeros((batch_size,patchx,patchy,imgs.shape[3]))
     msks_batch = np.zeros((batch_size,patchx,patchy,msks.shape[3]))
 
