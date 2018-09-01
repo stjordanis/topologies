@@ -314,15 +314,42 @@ def get_batch(imgs, msks, batch_size):
     Grab a random set of images/masks. Take a random 128x128 crop from them.
     """
 
+    num_imgs = imgs.shape[0]
+    x_len = imgs.shape[1]
+    y_len = msks.shape[2]
+
+    # Take random crop 128x128 from images
+    patchx = 64
+    patchy = 64
+
+    imgs_batch = np.zeros((batch_size,patchx,patchy,imgs.shape[3]))
+    msks_batch = np.zeros((batch_size,patchx,patchy,msks.shape[3]))
+
     while True:
 
-        idx = np.random.permutation(len(imgs))[:batch_size]
+        count = 0
+        for i in np.random.permutation(num_imgs)[:batch_size]:
 
-        # Take random crop 128x128 from images
-        x = np.random.choice(240-128)
-        y = np.random.choice(240-128)
+            x = np.random.choice(x_len-patchx)
+            y = np.random.choice(y_len-patchy)
 
-        yield imgs[idx, x:(x+128), y:(y+128), :], msks[idx, x:(x+128), y:(y+128), :]
+            imgs_batch[count] = imgs[i, x:(x+patchx),y:(y+patchy),:]
+            msks_batch[count] = msks[i, x:(x+patchx),y:(y+patchy),:]
+
+            if np.random.rand() > 0.5:
+                axis = np.random.choice([1, 2])  # Choose axis randomly
+                # Random flip
+                imgs_batch[count] = np.flip(imgs_batch[count],axis)
+                msks_batch[count] = np.flip(msks_batch[count],axis)
+
+                if np.random.rand() > 0.5: # Random 90 degree rotation
+                    imgs_batch[count] = np.rot90(imgs_batch[count],1,(0,1))
+                    msks_batch[count] = np.rot90(msks_batch[count],1,(0,1))
+
+
+            count += 1
+
+        yield imgs_batch, msks_batch
 
 
 def train_and_predict(args):
@@ -407,9 +434,10 @@ def train_and_predict(args):
     #                     validation_data=(imgs_test, msks_test),
     #                     callbacks=callbacks)
 
-    history = model.fit(train_generator,
+
+    history = model.fit_generator(train_generator,
+                        steps_per_epoch=imgs_train.shape[0]//args.batch_size,
                         epochs=args.epochs,
-                        batch_size=args.batch_size,
                         validation_data=(imgs_test, msks_test),
                         callbacks=callbacks)
 
