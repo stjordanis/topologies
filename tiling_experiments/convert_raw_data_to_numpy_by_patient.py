@@ -229,7 +229,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
         # At the beginning of the script we set the seed
         # to 816 so that it will always go through the same way and
         # produce the same one.
-        if np.random.rand() < args.split():
+        if np.random.rand() < args.split:
             save_data(imgs_all, msks_all, save_dir, "train")
         else:
             save_data(imgs_all, msks_all, save_dir, "test")
