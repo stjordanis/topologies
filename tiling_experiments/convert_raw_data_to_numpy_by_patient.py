@@ -204,7 +204,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 
         imgs_all.extend(np.asarray(stack_img_slices(mode_track, img_modes)))
 
-        if (stack_count == 0):
+        if (scan_count == 0):
             shapeImage = imgs_all.shape
             shapeMask = msks_all.shape
             maxshapeImage = (None, shapeImage[1],shapeImage[2],shapeImage[3])
@@ -230,7 +230,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 
 
         scan_count += 1
-        
+
         # Randomly split into train and test datasets.
         # At the beginning of the script we set the seed
         # to 816 so that it will always go through the same way and
