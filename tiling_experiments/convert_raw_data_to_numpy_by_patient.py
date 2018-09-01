@@ -58,23 +58,6 @@ print("Converting BraTS raw Nifti data files to training and testing" \
         " Numpy data files.")
 print(args)
 
-save_dir = os.path.join(args.save_path, "{}x{}/".format(args.resize, args.resize))
-
-# Create directory
-try:
-    os.makedirs(save_dir)
-except OSError:
-    if not os.path.isdir(save_dir):
-        raise
-
-# Check for existing numpy train/test files
-check_dir = os.listdir(save_dir)
-for item in check_dir:
-    if item.endswith(".npy"):
-        os.remove(os.path.join(save_dir, item))
-        print("Removed old version of {}".format(item))
-
-
 def parse_segments(seg):
 
     # Each channel corresponds to a different region of the tumor,
@@ -159,6 +142,23 @@ for subdir, dir, files in os.walk(args.data_path):
 
 scan_count = 0
 
+save_dir = os.path.join(args.save_path, "{}x{}/".format(args.resize, args.resize))
+
+# Create directory
+try:
+    os.makedirs(save_dir)
+except OSError:
+    if not os.path.isdir(save_dir):
+        raise
+
+outputfilename = os.path.join(save_dir, "processed_data.hdf5")
+
+assert(not os.path.isfile(outputfilename)), \
+    "Output file {} exists. " \
+    " Please delete and re-run script.".format(outputfilename)
+
+hdfFile = h5py.File(outputfilename, "w-")
+
 for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 
     # Ensure all necessary files are present
@@ -173,14 +173,10 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 
         for file in files:
 
-            imgs_all = []
-            msks_all = []
-
             if file.endswith("seg.nii.gz"):
                 path = os.path.join(subdir, file)
                 msk = np.array(nib.load(path).dataobj)
-                parsed = resize_data(parse_segments(msk), args.resize)
-                msks_all.extend(parsed)
+                msks_all = resize_data(parse_segments(msk), args.resize)
 
             if file.endswith("t1.nii.gz"):
                 path = os.path.join(subdir, file)
@@ -202,42 +198,75 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
                 img = np.array(nib.load(path).dataobj)
                 mode_track["flair"] = resize_data(parse_images(img), args.resize)
 
-        imgs_all.extend(np.asarray(stack_img_slices(mode_track, img_modes)))
+        imgs_all = np.asarray(stack_img_slices(mode_track, img_modes))
 
         if (scan_count == 0):
+            """
+            Train dataset
+            """
             shapeImage = imgs_all.shape
             shapeMask = msks_all.shape
             maxshapeImage = (None, shapeImage[1],shapeImage[2],shapeImage[3])
             maxshapeMask = (None, shapeImage[1], shapeImage[2], shapeImage[3])
-            hdfFile = h5py.File("brats2018_data.hdf5", "w-")
-            imgHDF = hdfFile.create_dataset("images/train",
+
+            imgHDF_train = hdfFile.create_dataset("images/train",
                                       data=imgs_all,
                                       dtype=float,
                                       maxshape=maxshapeImage)
-            mskHDF = hdfFile.create_dataset("masks/train",
+            mskHDF_train = hdfFile.create_dataset("masks/train",
+                                      data=msks_all,
+                                      dtype=float,
+                                      maxshape=maxshapeMask)
+        elif (scan_count == 1):
+            """
+            Test dataset
+            """
+            shapeImage = imgs_all.shape
+            shapeMask = msks_all.shape
+            maxshapeImage = (None, shapeImage[1],shapeImage[2],shapeImage[3])
+            maxshapeMask = (None, shapeImage[1], shapeImage[2], shapeImage[3])
+            imgHDF_test = hdfFile.create_dataset("images/test",
+                                      data=imgs_all,
+                                      dtype=float,
+                                      maxshape=maxshapeImage)
+            mskHDF_test = hdfFile.create_dataset("masks/test",
                                       data=msks_all,
                                       dtype=float,
                                       maxshape=maxshapeMask)
         else:
 
-            row = imgHDF.shape[0]
-            extent = imgs_all.shape[0]
-            imgHDF.resize(row+extent, axis=0) # Add new image
-            imgHDF[row:(row+extent),:,:,:] = imgs_all
+            # Randomly split into train and test datasets.
+            # At the beginning of the script we set the seed
+            # to 816 so that it will always go through the same way and
+            # produce the same one.
+            if np.random.rand() < args.split:
+                row = imgHDF_train.shape[0]
+                extent = imgs_all.shape[0]
+                imgHDF_train.resize(row+extent, axis=0) # Add new image
+                imgHDF_train[row:(row+extent),:,:,:] = imgs_all
 
-            mskHDF.resize(row+extent, axis=0) # Add new image
-            mskHDF[row:(row+extent),:,:,:] = msks_all
+                mskHDF_train.resize(row+extent, axis=0) # Add new image
+                mskHDF_train[row:(row+extent),:,:,:] = msks_all
+
+            else:
+                row = imgHDF_test.shape[0]
+                extent = imgs_all.shape[0]
+                imgHDF_test.resize(row+extent, axis=0) # Add new image
+                imgHDF_test[row:(row+extent),:,:,:] = imgs_all
+
+                mskHDF_test.resize(row+extent, axis=0) # Add new image
+                mskHDF_test[row:(row+extent),:,:,:] = msks_all
 
 
         scan_count += 1
 
-        # Randomly split into train and test datasets.
-        # At the beginning of the script we set the seed
-        # to 816 so that it will always go through the same way and
-        # produce the same one.
-    #    if np.random.rand() < args.split:
 
-imgHDF.attrs["lshape"] = np.shape(imgHDF)
-mskHDF.attrs["lshape"] = np.shape(mskHDF)
+imgHDF_train.attrs["lshape"] = np.shape(imgHDF_train)
+mskHDF_train.attrs["lshape"] = np.shape(mskHDF_train)
 
+imgHDF_test.attrs["lshape"] = np.shape(imgHDF_test)
+mskHDF_test.attrs["lshape"] = np.shape(mskHDF_test)
+
+print("Processed scans saved to: {}".format(os.path.join(args.save_path,
+            "brats2018_data.hdf5")))
 print("Total scans processed: {}\nDone.".format(scan_count))

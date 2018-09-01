@@ -69,11 +69,12 @@ def transform_mask_channels(msk):
 
 def normalize_img(img):
     """
-    Normalize images between 0 and 1
+    Normalize images
     """
 
     for idx in range(img.shape[3]):
-        img[:,:,:,idx] = img[:,:,:,idx] / np.max(img[:,:,:,idx])
+        #img[:,:,:,idx] = img[:,:,:,idx] / np.max(img[:,:,:,idx])
+        img[:,:,:,idx] = (img[:,:,:,idx] - np.mean(img[:,:,:,idx])) / np.std(img[:,:,:,idx])
 
     return np.rot90(img)
 
