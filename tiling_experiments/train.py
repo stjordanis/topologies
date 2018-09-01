@@ -19,6 +19,8 @@
 #
 
 import settings    # Use the custom settings.py file for default parameters
+import h5py
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--use_upsampling",
@@ -330,8 +332,12 @@ def get_batch(imgs, msks, batch_size):
         count = 0
         for i in np.random.permutation(num_imgs)[:batch_size]:
 
-            x = np.random.choice(x_len-patchx)
-            y = np.random.choice(y_len-patchy)
+            if (x_len - patchx) == 0:
+                x = 0
+                y = 0
+            else:
+                x = np.random.choice(x_len-patchx)
+                y = np.random.choice(y_len-patchy)
 
             imgs_batch[count] = imgs[i, x:(x+patchx),y:(y+patchy),:]
             msks_batch[count] = msks[i, x:(x+patchx),y:(y+patchy),:]
@@ -358,13 +364,23 @@ def train_and_predict(args):
     print("Loading and preprocessing train data...")
     print("-" * 40)
 
-    imgs_train, msks_train = load_data(args.data_path, "_train")
+    #imgs_train, msks_train = load_data(args.data_path, "_train")
+    filename = os.path.join(args.data_path, "processed_data.hdf5")
+
+    hdfFile = h5py.File(filename, "r")
+    imgs_train = hdfFile["images/train"][:]
+    msks_train = hdfFile["masks/train"][:]
+
     imgs_train, msks_train = update_channels(imgs_train, msks_train, args)
 
     print("-" * 40)
     print("Loading and preprocessing test data...")
     print("-" * 40)
-    imgs_test, msks_test = load_data(args.data_path, "_test")
+    #imgs_test, msks_test = load_data(args.data_path, "_test")
+
+    imgs_test = hdfFile["images/test"][:]
+    msks_test = hdfFile["masks/test"][:]
+
     imgs_test, msks_test = update_channels(imgs_test, msks_test, args)
 
     print("Train images shape = {}".format(imgs_train.shape))
@@ -415,11 +431,6 @@ def train_and_predict(args):
     history = K.callbacks.History()
 
     print("Batch size = {}".format(args.batch_size))
-    if args.channels_first:  # Swap first and last axes on data
-        imgs_train = np.swapaxes(imgs_train, 1, -1)
-        msks_train = np.swapaxes(msks_train, 1, -1)
-        imgs_test = np.swapaxes(imgs_test, 1, -1)
-        msks_test = np.swapaxes(msks_test, 1, -1)
 
     train_generator = get_batch(imgs_train, msks_train, args.batch_size)
 

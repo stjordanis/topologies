@@ -23,7 +23,6 @@ import os
 import numpy as np
 import settings
 
-
 def load_data(data_path, prefix="_train"):
 	imgs = np.load(os.path.join(data_path, "imgs"+prefix+".npy"),
 						 mmap_mode="r", allow_pickle=False)
