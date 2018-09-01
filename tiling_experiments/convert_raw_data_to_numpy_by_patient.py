@@ -23,6 +23,7 @@ import nibabel as nib
 import numpy.ma as ma
 import numpy as np
 from tqdm import tqdm
+import h5py
 
 # This is essential to make sure we get the same sequence each time
 np.random.seed(816) # seed with same number
@@ -149,28 +150,6 @@ def resize_data(dataset, new_size):
     return resized
 
 
-def save_data(imgs_new, msks_new, save_path, data="train"):
-
-    if os.path.isfile("{}imgs_{}.npy".format(save_path, data)):
-
-        # Open one file at a time (these will be large)
-        # and clear buffer immediately after concatenate/save
-
-        imgs = np.load("{}imgs_{}.npy".format(save_path, data))
-        np.save("{}imgs_{}.npy".format(save_path, data),
-                np.concatenate((imgs, imgs_new), axis=0))
-        imgs = []
-
-        msks = np.load("{}msks_{}.npy".format(save_path, data))
-        np.save("{}msks_{}.npy".format(save_path, data),
-                np.concatenate((msks, msks_new), axis=0))
-        msks = []
-
-    else:
-
-        np.save("{}imgs_{}.npy".format(save_path, data), imgs_new)
-        np.save("{}msks_{}.npy".format(save_path, data), msks_new)
-
 ##################################################################
 ##################################################################
 # Preprocess the total files sizes
@@ -178,8 +157,6 @@ sizecounter = 0
 for subdir, dir, files in os.walk(args.data_path):
     sizecounter += 1
 
-imgs_all = []
-msks_all = []
 scan_count = 0
 
 for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
@@ -195,6 +172,9 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
         mode_track = {mode: [] for mode in img_modes}
 
         for file in files:
+
+            imgs_all = []
+            msks_all = []
 
             if file.endswith("seg.nii.gz"):
                 path = os.path.join(subdir, file)
@@ -222,19 +202,42 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
                 img = np.array(nib.load(path).dataobj)
                 mode_track["flair"] = resize_data(parse_images(img), args.resize)
 
-        scan_count += 1
         imgs_all.extend(np.asarray(stack_img_slices(mode_track, img_modes)))
 
+        if (stack_count == 0):
+            shapeImage = imgs_all.shape
+            shapeMask = msks_all.shape
+            maxshapeImage = (None, shapeImage[1],shapeImage[2],shapeImage[3])
+            maxshapeMask = (None, shapeImage[1], shapeImage[2], shapeImage[3])
+            hdfFile = h5py.File("brats2018_data.hdf5", "w-")
+            imgHDF = hdfFile.create_dataset("images/train",
+                                      data=imgs_all,
+                                      dtype=float,
+                                      maxshape=maxshapeImage)
+            mskHDF = hdfFile.create_dataset("masks/train",
+                                      data=msks_all,
+                                      dtype=float,
+                                      maxshape=maxshapeMask)
+        else:
+
+            row = imgHDF.shape[0]
+            extent = imgs_all.shape[0]
+            imgHDF.resize(row+extent, axis=0) # Add new image
+            imgHDF[row:(row+extent),:,:,:] = imgs_all
+
+            mskHDF.resize(row+extent, axis=0) # Add new image
+            mskHDF[row:(row+extent),:,:,:] = msks_all
+
+
+        scan_count += 1
+        
         # Randomly split into train and test datasets.
         # At the beginning of the script we set the seed
         # to 816 so that it will always go through the same way and
         # produce the same one.
-        if np.random.rand() < args.split:
-            save_data(imgs_all, msks_all, save_dir, "train")
-        else:
-            save_data(imgs_all, msks_all, save_dir, "test")
+    #    if np.random.rand() < args.split:
 
-        imgs_all = []
-        msks_all = []
+imgHDF.attrs["lshape"] = np.shape(imgHDF)
+mskHDF.attrs["lshape"] = np.shape(mskHDF)
 
 print("Total scans processed: {}\nDone.".format(scan_count))
