@@ -319,8 +319,8 @@ def get_batch(imgs, msks, batch_size):
     y_len = msks.shape[2]
 
     # Take random crop 128x128 from images
-    patchx = 64
-    patchy = 64
+    patchx = 128
+    patchy = 128
 
     imgs_batch = np.zeros((batch_size,patchx,patchy,imgs.shape[3]))
     msks_batch = np.zeros((batch_size,patchx,patchy,msks.shape[3]))
