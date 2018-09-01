@@ -44,7 +44,7 @@ parser.add_argument(
 parser.add_argument("--epochs", type=int, default=settings.EPOCHS,
                     help="number of epochs to train")
 parser.add_argument("--patchheight", type=int, default=settings.PATCH_HEIGHT, help="height of patch to train on")
-parser.add_argument("--patchwidth", type=int, default-settings.PATCH_WIDTH, help="width of patch to train on")
+parser.add_argument("--patchwidth", type=int, default=settings.PATCH_WIDTH, help="width of patch to train on")
 
 parser.add_argument(
     "--learningrate",
