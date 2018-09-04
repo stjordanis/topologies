@@ -20,8 +20,8 @@
 
 import os
 
-DATA_PATH = os.environ.get('data_path', "../../data/Brats2018/128x128/")
-OUTPUT_PATH = os.environ.get('output_path', "../../data/Brats2018/output/")
+DATA_PATH = os.environ.get('data_path', "../../../../data/Brats2018/128x128/")
+OUTPUT_PATH = os.environ.get('output_path', "../../../../data/Brats2018/output/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
@@ -31,7 +31,7 @@ NUM_OUT_CHANNELS = 1
 
 EPOCHS = 10
 BATCH_SIZE = 128
-LEARNING_RATE = 0.0005
+LEARNING_RATE = 0.0001
 PRINT_MODEL = False
 
 # Mode 1: Use flair to identify the entire tumor
