@@ -36,7 +36,7 @@ parser.add_argument("--data_path",
                     default="../../../../data/Brats2018/MICCAI_BraTS_2018_Data_Training/",
                     help="Path to the raw BraTS datafiles")
 parser.add_argument("--save_path",
-                    default="../../../../data/Brats2018/128x128/",
+                    default="../../../../data/Brats2018/",
                     help="Folder to save Numpy data files")
 parser.add_argument("--resize", type=int, default=128,
                     help="Resize height and width to this size. "
@@ -158,37 +158,37 @@ def save_data(imgs_all, msks_all, split, save_path):
     new_imgs_test = imgs_all[train_size:, :, :, :]
     new_msks_test = msks_all[train_size:, :, :, :]
 
-    if os.path.isfile("{}imgs_train.npy".format(save_dir)):
+    if os.path.isfile("{}imgs_train.npy".format(save_path)):
 
         # Open one file at a time (these will be large)
         # and clear buffer immediately after concatenate/save
 
-        imgs_train = np.load("{}imgs_train.npy".format(save_dir))
+        imgs_train = np.load("{}imgs_train.npy".format(save_path))
         np.save("{}imgs_train.npy".format(save_path),
                 np.concatenate((imgs_train, new_imgs_train), axis=0))
         imgs_train = []
 
-        msks_train = np.load("{}msks_train.npy".format(save_dir))
+        msks_train = np.load("{}msks_train.npy".format(save_path))
         np.save("{}msks_train.npy".format(save_path),
                 np.concatenate((msks_train, new_msks_train), axis=0))
         msks_train = []
 
-        imgs_test = np.load("{}imgs_test.npy".format(save_dir))
+        imgs_test = np.load("{}imgs_test.npy".format(save_path))
         np.save("{}imgs_test.npy".format(save_path),
                 np.concatenate((imgs_test, new_imgs_test), axis=0))
         imgs_test = []
 
-        msks_test = np.load("{}msks_test.npy".format(save_dir))
+        msks_test = np.load("{}msks_test.npy".format(save_path))
         np.save("{}msks_test.npy".format(save_path),
                 np.concatenate((msks_test, new_msks_test), axis=0))
         msks_test = []
 
     else:
 
-        np.save("{}imgs_train.npy".format(save_dir), new_imgs_train)
-        np.save("{}msks_train.npy".format(save_dir), new_msks_train)
-        np.save("{}imgs_test.npy".format(save_dir), new_imgs_test)
-        np.save("{}msks_test.npy".format(save_dir), new_msks_test)
+        np.save("{}imgs_train.npy".format(save_path), new_imgs_train)
+        np.save("{}msks_train.npy".format(save_path), new_msks_train)
+        np.save("{}imgs_test.npy".format(save_path), new_imgs_test)
+        np.save("{}msks_test.npy".format(save_path), new_msks_test)
 
 
 imgs_all = []
@@ -249,7 +249,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
             (scan_count != 0) & (len(imgs_all) > 0) & \
             (len(msks_all) > 0):
             #print("Total scans processed: {}".format(scan_count))
-            save_data(imgs_all, msks_all, args.split, save_dir)
+            save_data(imgs_all, msks_all, args.split, save_path)
             imgs_all = []
             msks_all = []
 
@@ -257,5 +257,5 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 #   changes, this will catch those
 if len(imgs_all) > 0:
     print("Saving numpy files. This could take a while.")
-    save_data(imgs_all, msks_all, args.split, save_dir)
+    save_data(imgs_all, msks_all, args.split, save_path)
     print("Total scans processed: {}\nDone.".format(scan_count))
