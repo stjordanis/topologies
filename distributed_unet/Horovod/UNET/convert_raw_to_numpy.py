@@ -249,7 +249,7 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
             (scan_count != 0) & (len(imgs_all) > 0) & \
             (len(msks_all) > 0):
             #print("Total scans processed: {}".format(scan_count))
-            save_data(imgs_all, msks_all, args.split, save_path)
+            save_data(imgs_all, msks_all, args.split, save_dir)
             imgs_all = []
             msks_all = []
 
