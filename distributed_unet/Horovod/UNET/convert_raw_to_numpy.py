@@ -197,8 +197,10 @@ scan_count = 0
 
 # Preprocess the total files sizes
 sizecounter = 0
-for subdir, dir, files in tqdm(os.walk(args.data_path), unit="files"):
+for subdir, dir, files in os.walk(args.data_path):
     sizecounter += 1
+
+print("Processing raw Nifti files and converting them to Numpy data array files.")
 
 for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 
