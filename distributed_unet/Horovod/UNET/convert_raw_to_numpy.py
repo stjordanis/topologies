@@ -257,5 +257,5 @@ for subdir, dir, files in tqdm(os.walk(args.data_path), total=sizecounter):
 #   changes, this will catch those
 if len(imgs_all) > 0:
     print("Saving numpy files. This could take a while.")
-    save_data(imgs_all, msks_all, args.split, save_path)
+    save_data(imgs_all, msks_all, args.split, save_dir)
     print("Total scans processed: {}\nDone.".format(scan_count))
