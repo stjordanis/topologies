@@ -20,8 +20,8 @@
 
 import os
 
-DATA_PATH = os.environ.get('data_path', "/mnt/data/medical/brats/Brats2018/128x128/")
-OUTPUT_PATH = os.environ.get('output_path', "/mnt/data/medical/brats/Brats2017/output/")
+DATA_PATH = os.environ.get('data_path', "../../data/Brats2018/128x128/")
+OUTPUT_PATH = os.environ.get('output_path', "../../data/Brats2018/output/")
 
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
