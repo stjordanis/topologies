@@ -37,7 +37,7 @@ def dice_coef_loss(y_true, y_pred, smooth=1.0):
 	union_set = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred)
 	loss = -tf.log(tf.constant(2.) * intersection + smooth) + \
 		tf.log(union_set + smooth)
-	return loss
+	return tf.pow(loss,0.3)
 
 
 def sensitivity(y_true, y_pred, smooth=1.):

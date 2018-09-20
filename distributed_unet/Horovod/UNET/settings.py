@@ -29,10 +29,10 @@ IMG_WIDTH = 128
 NUM_IN_CHANNELS = 1
 NUM_OUT_CHANNELS = 1
 
-EPOCHS = 10
+EPOCHS = 15
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
-PRINT_MODEL = False
+PRINT_MODEL = True
 
 # Mode 1: Use flair to identify the entire tumor
 # Mode 2: Use T1 Gd to identify the active tumor
