@@ -172,7 +172,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 def sensitivity(target, prediction, axis=(1,2,3), smooth = 1e-5 ):
 
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	coef = (intersection + smooth) / (tf.reduce_sum(prediction,
+	coef = (intersection + smooth) / (tf.reduce_sum(target,
 												    axis=axis) + smooth)
 	return tf.reduce_mean(coef)
 
