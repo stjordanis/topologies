@@ -48,7 +48,7 @@ parser.add_argument("--train_test_split",
                     help="Train test split (0-1)")
 parser.add_argument("--epochs",
                     type=int,
-                    default=10,
+                    default=30,
                     help="Number of epochs")
 parser.add_argument("--intraop_threads",
                     type=int,
@@ -126,11 +126,11 @@ def get_file_list(data_path=args.data_path):
     return trainList, testList
 
 
-def get_batch(fileList, batch_size=args.bz):
+def get_batch(fileList, batch_size=args.bz, randomize=True):
     """
     Get a single batch of images and masks
     """
-    def crop_img(img, msk,
+    def crop_img(img, msk, randomize=True,
                  cropx=args.patch_dim,
                  cropy=args.patch_dim,
                  cropz=args.patch_dim):
@@ -138,11 +138,26 @@ def get_batch(fileList, batch_size=args.bz):
         Crop the image and mask
         """
         x, y, z = img.shape
-        startx = x//2-(cropx//2)
-        starty = y//2-(cropy//2)
-        startz = z//2-(cropz//2)
 
-        return img[startx:startx+cropx, starty:starty+cropy, startz:startz+cropz], msk[startx:startx+cropx, starty:starty+cropy, startz:startz+cropz]
+        if randomize:
+            startx = np.random.choice((x+cropx)//2)
+            if ((startx + cropx) > x): # Don't fall off the image
+                startx = (x-cropx)//2
+
+            starty = np.random.choice((y+cropy)//2)
+            if ((starty + cropy) > y): # Don't fall off the image
+                starty = (y-cropy)//2
+
+            startz = np.random.choice((z+cropz)//2)
+            if ((startz + cropz) > z): # Don't fall off the image
+                startz = (z-cropz)//2
+
+        else:
+            startx = (x-cropx)//2
+            starty = (y-cropy)//2
+            startz = (z-cropz)//2
+
+        return img[startx:(startx+cropx), starty:(starty+cropy), startz:(startz+cropz)], msk[startx:(startx+cropx), starty:(starty+cropy), startz:(startz+cropz)]
 
     random.shuffle(fileList)
     files = fileList[:batch_size]
@@ -164,9 +179,19 @@ def get_batch(fileList, batch_size=args.bz):
         msk[msk > 0] = 1.0   # Combine masks to get whole tumor
 
         # Take a crop of the patch_dim size
-        img, msk = crop_img(img, msk)
+        img, msk = crop_img(img, msk, randomize)
 
         img = (img - np.mean(img)) / np.std(img)  # z normalize image
+
+        # Data augmentation
+        if randomize:
+            if np.random.rand() > 0.5:
+                img = np.swapaxes(img, 0, 1)
+                msk = np.swapaxes(msk, 0, 1)
+
+            if np.random.rand() > 0.5:
+                img = np.swapaxes(img, 1, 2)
+                msk = np.swapaxes(msk, 1, 2)
 
         imgs[idx, :, :, :, 0] = img
         msks[idx, :, :, :, 0] = msk
@@ -176,12 +201,12 @@ def get_batch(fileList, batch_size=args.bz):
     return imgs, msks
 
 
-def batch_generator(fileList, batch_size=args.bz):
+def batch_generator(fileList, batch_size=args.bz, randomize=True):
     """
     Batch generator for getting imgs and masks
     """
     while True:
-        yield get_batch(fileList, batch_size)
+        yield get_batch(fileList, batch_size, randomize)
 
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
@@ -216,10 +241,10 @@ callbacks_list = [checkpoint, tb_logs]
 trainList, testList = get_file_list()
 
 # Fit the model
-model.fit_generator(batch_generator(trainList, args.bz),
+model.fit_generator(batch_generator(trainList, args.bz, True),
                     steps_per_epoch=len(trainList)//args.bz,
                     epochs=args.epochs, verbose=1,
-                    validation_data=batch_generator(testList, args.bz),
+                    validation_data=batch_generator(testList, args.bz, False),
                     validation_steps=len(testList)//args.bz,
                     callbacks=callbacks_list)
 
