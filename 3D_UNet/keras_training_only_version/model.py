@@ -38,9 +38,9 @@ def dice_coef_loss(target, prediction, axis=(1,2,3), smooth=1.):
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
 	p = tf.reduce_sum(prediction, axis=axis)
 	t = tf.reduce_sum(target, axis=axis)
-	numerator = tf.reduce_mean(2. * intersection + smooth)
+	numerator = tf.reduce_mean(intersection + smooth)
 	denominator = tf.reduce_mean(t + p + smooth)
-	dice_loss = -tf.log(numerator) + tf.log(denominator)
+	dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
 
 	return dice_loss
 
@@ -169,14 +169,14 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 	return model
 
 
-def sensitivity(target, prediction, axis=(1,2,3), smooth = 1e-5 ):
+def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
 
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
 	coef = (intersection + smooth) / (tf.reduce_sum(target,
 												    axis=axis) + smooth)
 	return tf.reduce_mean(coef)
 
-def specificity(target, prediction, axis=(1,2,3), smooth = 1e-5 ):
+def specificity(target, prediction, axis=(1,2,3), smooth = 1. ):
 
 	intersection = tf.reduce_sum(prediction * target, axis=axis)
 	coef = (intersection + smooth) / (tf.reduce_sum(prediction,
