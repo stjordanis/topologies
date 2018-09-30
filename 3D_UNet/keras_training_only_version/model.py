@@ -44,6 +44,12 @@ def dice_coef_loss(target, prediction, axis=(1,2,3), smooth=1.):
 
 	return dice_loss
 
+def combined_dice_ce_loss(target, prediction, axis=(1,2,3), smooth=1.):
+	"""
+	Combined Dice and Binary Cross Entropy Loss
+	"""
+	return dice_coef_loss(target, prediction, axis, smooth) + K.losses.binary_crossentropy(target, prediction)
+
 CHANNEL_LAST = True
 if CHANNEL_LAST:
 	concat_axis = -1
@@ -162,7 +168,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 		model.summary()
 
 	model.compile(optimizer=K.optimizers.Adam(learning_rate),
-				  loss=[dice_coef_loss],
+				  loss=[combined_dice_ce_loss],
 				  metrics=[dice_coef, "accuracy",
 				  		   sensitivity, specificity])
 
