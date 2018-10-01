@@ -228,6 +228,8 @@ model = unet_3d(input_shape=input_shape,
                 dropout=0.2,
                 print_summary=True)
 
+model.load_weights("saved_model/3d_unet_brat2018_dice79.hdf5")
+
 start_time = time.time()
 
 # Save best model to hdf5 file
@@ -251,18 +253,18 @@ callbacks_list = [checkpoint, tb_logs]
 trainList, testList = get_file_list()
 with open("trainlist.txt", "w") as f:
     for item in trainList:
-        f.write("%s\n".format(item))
+        f.write("{}\n".format(item))
 
 with open("testlist.txt", "w") as f:
     for item in testList:
-        f.write("%s\n".format(item))
+        f.write("{}\n".format(item))
 
 # Fit the model
 model.fit_generator(batch_generator(trainList, args.bz, True),
                     steps_per_epoch=len(trainList)//args.bz,
                     epochs=args.epochs, verbose=1,
-                    validation_data=batch_generator(testList, args.bz, False),
-                    validation_steps=len(testList)//args.bz,
+                    validation_data=batch_generator(testList, len(testList), False),
+                    validation_steps=1,
                     callbacks=callbacks_list)
 
 stop_time = time.time()
