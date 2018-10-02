@@ -228,7 +228,7 @@ model = unet_3d(input_shape=input_shape,
                 dropout=0.2,
                 print_summary=True)
 
-model.load_weights("saved_model/3d_unet_brat2018_dice79.hdf5")
+model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
 
 start_time = time.time()
 
