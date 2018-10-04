@@ -126,7 +126,7 @@ def get_file_list(data_path=args.data_path):
     return trainList, testList
 
 
-def get_batch(fileList, batch_size=args.bz, randomize=True):
+def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
     """
     Get a single batch of images and masks
     """
@@ -139,17 +139,17 @@ def get_batch(fileList, batch_size=args.bz, randomize=True):
         """
         x, y, z = img.shape
 
-        if randomize:
+        if randomize and (np.random.rand() > 0.5):
             startx = np.random.choice((x+cropx)//2)
-            if ((startx + cropx) > x): # Don't fall off the image
+            if ((startx + cropx) > x):  # Don't fall off the image
                 startx = (x-cropx)//2
 
             starty = np.random.choice((y+cropy)//2)
-            if ((starty + cropy) > y): # Don't fall off the image
+            if ((starty + cropy) > y):  # Don't fall off the image
                 starty = (y-cropy)//2
 
             startz = np.random.choice((z+cropz)//2)
-            if ((startz + cropz) > z): # Don't fall off the image
+            if ((startz + cropz) > z):  # Don't fall off the image
                 startz = (z-cropz)//2
 
         else:
@@ -157,10 +157,13 @@ def get_batch(fileList, batch_size=args.bz, randomize=True):
             starty = (y-cropy)//2
             startz = (z-cropz)//2
 
-        return img[startx:(startx+cropx), starty:(starty+cropy), startz:(startz+cropz)], msk[startx:(startx+cropx), starty:(starty+cropy), startz:(startz+cropz)]
+        slicex = slice(startx, startx+cropx)
+        slicey = slice(starty, starty+cropy)
+        slicez = slice(startz, startz+cropz)
+        return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
 
-    random.shuffle(fileList)
-    files = fileList[:batch_size]
+    #random.shuffle(fileList)
+    files = fileList[batch_start:(batch_start+batch_size)]
 
     imgs = np.zeros((batch_size, args.patch_dim,
                      args.patch_dim, args.patch_dim, 1))
@@ -184,7 +187,7 @@ def get_batch(fileList, batch_size=args.bz, randomize=True):
         img = (img - np.mean(img)) / np.std(img)  # z normalize image
 
         # Data augmentation
-        if randomize:
+        if randomize and (np.random.rand() > 0.5):
             if np.random.rand() > 0.5:
                 img = np.swapaxes(img, 0, 1)
                 msk = np.swapaxes(msk, 0, 1)
@@ -192,6 +195,10 @@ def get_batch(fileList, batch_size=args.bz, randomize=True):
             if np.random.rand() > 0.5:
                 img = np.swapaxes(img, 1, 2)
                 msk = np.swapaxes(msk, 1, 2)
+
+            if np.random.rand() > 0.5:
+                img = np.flip(img, 1)
+                msk = np.flip(msk, 1)
 
         imgs[idx, :, :, :, 0] = img
         msks[idx, :, :, :, 0] = msk
@@ -205,9 +212,12 @@ def batch_generator(fileList, batch_size=args.bz, randomize=True):
     """
     Batch generator for getting imgs and masks
     """
+    batch_start = 0
     while True:
-        yield get_batch(fileList, batch_size, randomize)
-
+        imgs, msks = get_batch(fileList, batch_start, batch_size, randomize)
+        if ((batch_start + batch_size) > len(fileList)):
+            batch_start = 0
+        yield imgs, msks
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
 
@@ -217,6 +227,8 @@ model = unet_3d(input_shape=input_shape,
                 n_cl_out=1,  # single channel (greyscale)
                 dropout=0.2,
                 print_summary=True)
+
+model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
 
 start_time = time.time()
 
@@ -228,8 +240,8 @@ except:
     os.mkdir(directory)
 
 checkpoint = K.callbacks.ModelCheckpoint(os.path.join(args.saved_model_path,
-										 "3d_unet_brat2018.hdf5"),
-										 verbose=1,
+                                                      "3d_unet_brat2018.hdf5"),
+                                         verbose=1,
                                          save_best_only=True)
 
 # TensorBoard
@@ -239,13 +251,20 @@ callbacks_list = [checkpoint, tb_logs]
 
 # Separate file lists into train and test sets
 trainList, testList = get_file_list()
+with open("trainlist.txt", "w") as f:
+    for item in trainList:
+        f.write("{}\n".format(item))
+
+with open("testlist.txt", "w") as f:
+    for item in testList:
+        f.write("{}\n".format(item))
 
 # Fit the model
 model.fit_generator(batch_generator(trainList, args.bz, True),
                     steps_per_epoch=len(trainList)//args.bz,
                     epochs=args.epochs, verbose=1,
-                    validation_data=batch_generator(testList, args.bz, False),
-                    validation_steps=len(testList)//args.bz,
+                    validation_data=batch_generator(testList, len(testList), False),
+                    validation_steps=1,
                     callbacks=callbacks_list)
 
 stop_time = time.time()
