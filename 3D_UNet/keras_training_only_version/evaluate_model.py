@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(
     description="Train 3D U-Net model", add_help=True)
 parser.add_argument("--bz",
                     type=int,
-                    default=8,
+                    default=1,
                     help="Batch size")
 parser.add_argument("--patch_dim",
                     type=int,
@@ -31,6 +31,9 @@ parser.add_argument("--blocktime",
                     type=int,
                     default=0,
                     help="Block time for CPU threads")
+parser.add_argument("--model",
+                    default="3d_unet_brat2018_dice82.hdf5",
+                    help="Trained model to load")
 
 args = parser.parse_args()
 
@@ -47,7 +50,7 @@ config = tf.ConfigProto(
 sess = tf.Session(config=config)
 K.backend.set_session(sess)
 
-model = K.models.load_model("saved_model/3d_unet_brat2018_dice76.hdf5",
+model = K.models.load_model(os.path.join("saved_model",args.model),
                             custom_objects={"dice_coef":dice_coef,
                             "dice_coef_loss":dice_coef_loss,
                             "sensitivity":sensitivity,
@@ -67,3 +70,34 @@ i = 0
 for name in model.metrics_names:
     print("{} = {:.4f}".format(name, m[i]))
     i += 1
+
+save_directory = "predictions_directory"
+try:
+    os.stat(save_directory)
+except:
+    os.mkdir(save_directory)
+
+print("Predicting masks")
+preds = model.predict(imgs, args.bz)
+np.save(os.path.join(save_directory, "msks_pred_3d.npy"), preds)
+
+"""
+
+Save the predictions as Nifti files so that we can
+display them on a 3D viewer.
+
+"""
+import nibabel as nib
+from tqdm import tqdm
+
+print("Saving Nifti predictions to {}".format(save_directory))
+for idx in tqdm(range(preds.shape[0])):
+
+    img = nib.Nifti1Image(imgs[idx,:,:,:,0], np.eye(4))
+    img.to_filename(os.path.join(save_directory,"img{}.nii.gz".format(idx)))
+
+    msk = nib.Nifti1Image(msks[idx,:,:,:,0], np.eye(4))
+    msk.to_filename(os.path.join(save_directory,"msk{}.nii.gz".format(idx)))
+
+    pred = nib.Nifti1Image(preds[idx,:,:,:,0], np.eye(4))
+    pred.to_filename(os.path.join(save_directory,"pred{}.nii.gz".format(idx)))

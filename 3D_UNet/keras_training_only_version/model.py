@@ -62,7 +62,7 @@ else:
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 				 n_cl_out=1, dropout=0.2, print_summary = False):
 
-	inputs = K.layers.Input(shape=input_shape, name="Input_Image")
+	inputs = K.layers.Input(shape=[None,None,None,1], name="Input_Image")
 
 	params = dict(kernel_size=(3, 3, 3), activation=None,
 				  padding="same", data_format=data_format,
@@ -168,9 +168,11 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 		model.summary()
 
 	model.compile(optimizer=K.optimizers.Adam(learning_rate),
-				  loss=[combined_dice_ce_loss],
+				  #loss=[combined_dice_ce_loss],
+                  loss=[dice_coef_loss],
 				  metrics=[dice_coef, "accuracy",
 				  		   sensitivity, specificity])
+
 
 	return model
 

@@ -139,23 +139,22 @@ def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
         """
         x, y, z = img.shape
 
+        startx = (x-cropx)//2
+        starty = (y-cropy)//2
+        startz = (z-cropz)//2
+
         if randomize and (np.random.rand() > 0.5):
-            startx = np.random.choice((x+cropx)//2)
+            startx += np.random.choice(range(-10,10))
             if ((startx + cropx) > x):  # Don't fall off the image
                 startx = (x-cropx)//2
 
-            starty = np.random.choice((y+cropy)//2)
+            starty += np.random.choice(range(-10,10))
             if ((starty + cropy) > y):  # Don't fall off the image
                 starty = (y-cropy)//2
 
-            startz = np.random.choice((z+cropz)//2)
+            startz += np.random.choice(range(-10,10))
             if ((startz + cropz) > z):  # Don't fall off the image
                 startz = (z-cropz)//2
-
-        else:
-            startx = (x-cropx)//2
-            starty = (y-cropy)//2
-            startz = (z-cropz)//2
 
         slicex = slice(startx, startx+cropx)
         slicey = slice(starty, starty+cropy)
@@ -189,16 +188,14 @@ def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
         # Data augmentation
         if randomize and (np.random.rand() > 0.5):
             if np.random.rand() > 0.5:
-                img = np.swapaxes(img, 0, 1)
-                msk = np.swapaxes(msk, 0, 1)
+                ax = np.random.choice([0,1,2])  # Random 0,1,2 (axes to flip)
+                img = np.flip(img, ax)
+                msk = np.flip(msk, ax)
 
-            if np.random.rand() > 0.5:
-                img = np.swapaxes(img, 1, 2)
-                msk = np.swapaxes(msk, 1, 2)
-
-            if np.random.rand() > 0.5:
-                img = np.flip(img, 1)
-                msk = np.flip(msk, 1)
+            elif np.random.rand() > 0.5:
+                rot = np.random.choice([1,2,3]) #90, 180, or 270 degrees
+                img = np.rot90(img, rot)
+                msk = np.rot90(msk, rot)
 
         imgs[idx, :, :, :, 0] = img
         msks[idx, :, :, :, 0] = msk
@@ -225,7 +222,7 @@ model = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
                 learning_rate=args.lr,
                 n_cl_out=1,  # single channel (greyscale)
-                dropout=0.2,
+                dropout=0.5,
                 print_summary=True)
 
 model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
@@ -259,12 +256,15 @@ with open("testlist.txt", "w") as f:
     for item in testList:
         f.write("{}\n".format(item))
 
+# Run the script  "load_brats_images.py" to generate these Numpy data files
+imgs_test = np.load("imgs_test_3d.npy")
+msks_test = np.load("msks_test_3d.npy")
+
 # Fit the model
 model.fit_generator(batch_generator(trainList, args.bz, True),
                     steps_per_epoch=len(trainList)//args.bz,
                     epochs=args.epochs, verbose=1,
-                    validation_data=batch_generator(testList, len(testList), False),
-                    validation_steps=1,
+                    validation_data=(imgs_test,msks_test),
                     callbacks=callbacks_list)
 
 stop_time = time.time()
