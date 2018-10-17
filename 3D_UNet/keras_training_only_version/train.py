@@ -217,6 +217,8 @@ def batch_generator(fileList, batch_size=args.bz, randomize=True):
         imgs, msks = get_batch(fileList, batch_start, batch_size, randomize)
         if ((batch_start + batch_size) > len(fileList)):
             batch_start = 0
+	else:
+	    batch_start += batch_size
         yield imgs, msks
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
