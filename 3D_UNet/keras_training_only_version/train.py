@@ -17,6 +17,7 @@
 
 # TODO: Try https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 
+import keras as K
 import numpy as np
 import random
 import os
@@ -94,7 +95,6 @@ print("args = {}".format(args))
 os.system("uname -a")
 print("TensorFlow version: {}".format(tf.__version__))
 
-import keras as K
 
 print("Keras API version: {}".format(K.__version__))
 
@@ -147,15 +147,15 @@ def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
         startz = (z-cropz)//2
 
         if randomize and (np.random.rand() > 0.5):
-            startx += np.random.choice(range(-10,10))
+            startx += np.random.choice(range(-10, 10))
             if ((startx + cropx) > x):  # Don't fall off the image
                 startx = (x-cropx)//2
 
-            starty += np.random.choice(range(-10,10))
+            starty += np.random.choice(range(-10, 10))
             if ((starty + cropy) > y):  # Don't fall off the image
                 starty = (y-cropy)//2
 
-            startz += np.random.choice(range(-10,10))
+            startz += np.random.choice(range(-10, 10))
             if ((startz + cropz) > z):  # Don't fall off the image
                 startz = (z-cropz)//2
 
@@ -164,7 +164,7 @@ def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
         slicez = slice(startz, startz+cropz)
         return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
 
-    #random.shuffle(fileList)
+    # random.shuffle(fileList)
     files = fileList[batch_start:(batch_start+batch_size)]
 
     imgs = np.zeros((batch_size, args.patch_dim,
@@ -191,12 +191,12 @@ def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
         # Data augmentation
         if randomize and (np.random.rand() > 0.5):
             if np.random.rand() > 0.5:
-                ax = np.random.choice([0,1,2])  # Random 0,1,2 (axes to flip)
+                ax = np.random.choice([0, 1, 2])  # Random 0,1,2 (axes to flip)
                 img = np.flip(img, ax)
                 msk = np.flip(msk, ax)
 
             elif np.random.rand() > 0.5:
-                rot = np.random.choice([1,2,3]) #90, 180, or 270 degrees
+                rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
                 img = np.rot90(img, rot)
                 msk = np.rot90(msk, rot)
 
@@ -217,9 +217,10 @@ def batch_generator(fileList, batch_size=args.bz, randomize=True):
         imgs, msks = get_batch(fileList, batch_start, batch_size, randomize)
         if ((batch_start + batch_size) > len(fileList)):
             batch_start = 0
-	else:
-	    batch_start += batch_size
+        else:
+            batch_start += batch_size
         yield imgs, msks
+
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
 
@@ -243,7 +244,7 @@ except:
 saved_model_name = os.path.join(directory, args.model_filename)
 
 if os.path.isfile(saved_model_name):
-   model.load_weights(saved_model_name)
+    model.load_weights(saved_model_name)
 
 checkpoint = K.callbacks.ModelCheckpoint(saved_model_name,
                                          verbose=1,
@@ -275,7 +276,7 @@ msks_test = np.load("msks_test_3d.npy")
 model.fit_generator(batch_generator(trainList, args.bz, True),
                     steps_per_epoch=len(trainList)//args.bz,
                     epochs=args.epochs, verbose=1,
-                    validation_data=(imgs_test,msks_test),
+                    validation_data=(imgs_test, msks_test),
                     callbacks=callbacks_list)
 
 stop_time = time.time()
