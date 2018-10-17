@@ -4,7 +4,7 @@ import nibabel as nib
 import numpy as np
 from tqdm import tqdm
 
-def get_file_list(data_path="/home/bduser/tony/data/Brats2018/MICCAI_BraTS_2018_Data_Training"):
+def get_file_list(data_path="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training"):
 
     fileList = []
     for subdir, dir, files in os.walk(data_path):

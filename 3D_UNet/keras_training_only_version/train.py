@@ -71,7 +71,7 @@ parser.add_argument("--use_upsampling",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
 parser.add_argument("--data_path",
-                    default="/home/bduser/tony/data/Brats2018/MICCAI_BraTS_2018_Data_Training",
+                    default="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training",
                     help="Root directory for BraTS 2018 dataset")
 parser.add_argument("--saved_model_path",
                     default="./saved_model",
@@ -225,7 +225,7 @@ model = unet_3d(input_shape=input_shape,
                 dropout=0.5,
                 print_summary=True)
 
-model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
+#model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
 
 start_time = time.time()
 
@@ -255,6 +255,9 @@ with open("trainlist.txt", "w") as f:
 with open("testlist.txt", "w") as f:
     for item in testList:
         f.write("{}\n".format(item))
+
+print("Number of training MRIs = {}".format(len(trainList)))
+print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
 imgs_test = np.load("imgs_test_3d.npy")
