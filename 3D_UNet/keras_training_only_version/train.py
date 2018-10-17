@@ -76,6 +76,9 @@ parser.add_argument("--data_path",
 parser.add_argument("--saved_model_path",
                     default="./saved_model",
                     help="Save model to this path")
+parser.add_argument("--model_filename",
+                    default="3d_unet_brats2018.hdf5",
+                    help="Saved model name")
 
 args = parser.parse_args()
 
@@ -225,7 +228,6 @@ model = unet_3d(input_shape=input_shape,
                 dropout=0.5,
                 print_summary=True)
 
-#model.load_weights("saved_model/3d_unet_brat2018_dice76.hdf5")
 
 start_time = time.time()
 
@@ -236,8 +238,12 @@ try:
 except:
     os.mkdir(directory)
 
-checkpoint = K.callbacks.ModelCheckpoint(os.path.join(args.saved_model_path,
-                                                      "3d_unet_brat2018.hdf5"),
+saved_model_name = os.path.join(directory, args.model_filename)
+
+if os.path.isfile(saved_model_name):
+   model.load_weights(saved_model_name)
+
+checkpoint = K.callbacks.ModelCheckpoint(saved_model_name,
                                          verbose=1,
                                          save_best_only=True)
 
