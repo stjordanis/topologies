@@ -52,7 +52,8 @@ def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
     Combined Dice and Binary Cross Entropy Loss
     """
-    return dice_coef_loss(target, prediction, axis, smooth) + K.losses.binary_crossentropy(target, prediction)
+    return dice_coef_loss(target, prediction, axis, smooth) +
+            K.losses.binary_crossentropy(target, prediction)
 
 
 CHANNEL_LAST = True
@@ -68,6 +69,9 @@ else:
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                  n_cl_out=1, dropout=0.2, print_summary=False,
                  using_horovod=False):
+    """
+    3D U-Net
+    """
 
     inputs = K.layers.Input(shape=[None, None, None, 1], name="Input_Image")
 
@@ -193,14 +197,18 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 
 
 def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
-
+    """
+    Sensitivity
+    """
     intersection = tf.reduce_sum(prediction * target, axis=axis)
     coef = (intersection + smooth) / (tf.reduce_sum(target,
                                                     axis=axis) + smooth)
     return tf.reduce_mean(coef)
 
 def specificity(target, prediction, axis=(1,2,3), smooth = 1. ):
-
+    """
+    Specificity
+    """
     intersection = tf.reduce_sum(prediction * target, axis=axis)
     coef = (intersection + smooth) / (tf.reduce_sum(prediction,
                                                     axis=axis) + smooth)

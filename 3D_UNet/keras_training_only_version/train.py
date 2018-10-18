@@ -70,8 +70,9 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
+datapath="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training"
 parser.add_argument("--data_path",
-                    default="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training",
+                    default=datapath,
                     help="Root directory for BraTS 2018 dataset")
 parser.add_argument("--saved_model",
                     default="./saved_model/3d_unet_brats2018.hdf5",
@@ -133,7 +134,8 @@ def get_file_list(data_path=args.data_path):
     for subdir, dir, files in os.walk(data_path):
         # Make sure directory has data
         if os.path.isfile(os.path.join(subdir,
-                                       os.path.basename(subdir) + "_flair.nii.gz")):
+                                       os.path.basename(subdir)
+                                       + "_flair.nii.gz")):
             fileList.append(subdir)
 
     random.Random(816).shuffle(fileList)
