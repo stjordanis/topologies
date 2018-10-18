@@ -182,7 +182,7 @@ training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
 training_generator = DataGenerator(trainList, **training_data_params)
 
 validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
-               "batch_size": args.bz,
+               "batch_size": 1,  # Use 1 so that we don't have partial batch
                "n_in_channels": 1,
                "n_out_channels": 1,
                "augment": False,
