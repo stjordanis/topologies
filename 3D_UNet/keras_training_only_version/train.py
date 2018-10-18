@@ -74,12 +74,9 @@ parser.add_argument("--use_upsampling",
 parser.add_argument("--data_path",
                     default="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training",
                     help="Root directory for BraTS 2018 dataset")
-parser.add_argument("--saved_model_path",
-                    default="./saved_model",
+parser.add_argument("--saved_model",
+                    default="./saved_model/3d_unet_brats2018.hdf5",
                     help="Save model to this path")
-parser.add_argument("--model_filename",
-                    default="3d_unet_brats2018.hdf5",
-                    help="Saved model name")
 
 args = parser.parse_args()
 
@@ -141,18 +138,16 @@ model = unet_3d(input_shape=input_shape,
 start_time = time.time()
 
 # Save best model to hdf5 file
-directory = os.path.dirname(args.saved_model_path)
+directory = os.path.dirname(args.saved_model)
 try:
     os.stat(directory)
 except:
     os.mkdir(directory)
 
-saved_model_name = os.path.join(args.saved_model_path, args.model_filename)
+if os.path.isfile(args.saved_model):
+    model.load_weights(args.saved_model_name)
 
-if os.path.isfile(saved_model_name):
-    model.load_weights(saved_model_name)
-
-checkpoint = K.callbacks.ModelCheckpoint(saved_model_name,
+checkpoint = K.callbacks.ModelCheckpoint(args.saved_model_name,
                                          verbose=1,
                                          save_best_only=True)
 
