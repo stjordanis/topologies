@@ -80,30 +80,30 @@ class DataGenerator(K.utils.Sequence):
         Crop the image and mask
         """
 
-        slicex = []
+        slices = []
 
         # Only randomize half when asked
         randomize = randomize and (np.random.rand() > 0.5)
 
-        for idx in range(len(self.dim)):
+        for idx in range(len(self.dim)):  # Go through each dimension
 
             cropLen = self.dim[idx]
             imgLen = img.shape[idx]
 
-            startx = (imgLen-cropLen)//2
+            start = (imgLen-cropLen)//2
 
             ratio_crop = 0.10  # Crop up this this % of pixels for offset
-            # Number of pixels to offset crop in X dimension
-            offsetx = int(np.floor(startx*ratio_crop))
+            # Number of pixels to offset crop in this dimension
+            offset = int(np.floor(start*ratio_crop))
 
             if randomize:
-                startx += np.random.choice(range(-offsetx, offsetx))
-                if ((startx + cropLen) > imgLen):  # Don't fall off the image
-                    startx = (imgLen-cropLen)//2
+                start += np.random.choice(range(-offset, offset))
+                if ((start + cropLen) > imgLen):  # Don't fall off the image
+                    start = (imgLen-cropLen)//2
 
-            slicex.append(slice(startx, startx+cropLen))
+            slices.append(slice(start, start+cropLen))
 
-        return img[tuple(slicex)], msk[tuple(slicex)]
+        return img[tuple(slices)], msk[tuple(slices)]
 
     def augment_data(self, img, msk):
         """
@@ -112,7 +112,8 @@ class DataGenerator(K.utils.Sequence):
         """
 
         if np.random.rand() > 0.5:
-            ax = np.random.choice(np.arange(len(self.dim)))  # Random 0,1,2 (axes to flip)
+            # Random 0,1,2 (axes to flip)
+            ax = np.random.choice(np.arange(len(self.dim)))
             img = np.flip(img, ax)
             msk = np.flip(msk, ax)
 
@@ -133,11 +134,14 @@ class DataGenerator(K.utils.Sequence):
     def __data_generation(self, list_IDs_temp):
         """
         Generates data containing batch_size samples
+
+        This just reads the list of filename to load.
+        Change this to suit your dataset.
         """
 
         # Make empty arrays for the images and mask batches
-        imgs = np.empty((self.batch_size, *self.dim, self.n_in_channels))
-        msks = np.empty((self.batch_size, *self.dim, self.n_out_channels))
+        imgs = np.zeros((self.batch_size, *self.dim, self.n_in_channels))
+        msks = np.zeros((self.batch_size, *self.dim, self.n_out_channels))
 
         idx = 0
         for file in list_IDs_temp:

@@ -15,8 +15,8 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-import keras as K
 import numpy as np
+
 import random
 import os
 import argparse
@@ -25,7 +25,6 @@ import time
 import datetime
 import tensorflow as tf
 from model import *
-import nibabel as nib
 
 from dataloader import DataGenerator
 
@@ -77,6 +76,10 @@ parser.add_argument("--data_path",
 parser.add_argument("--saved_model",
                     default="./saved_model/3d_unet_brats2018.hdf5",
                     help="Save model to this path")
+parser.add_argument("--horovod",
+                    action="store_true",
+                    default=False,
+                    help="Use Horovod")
 
 args = parser.parse_args()
 
@@ -85,15 +88,29 @@ os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 
-os.system("lscpu")
-print("Started script on {}".format(datetime.datetime.now()))
+if args.horovod:
+    import horovod.keras as hvd
+    hvd.init()
 
-print("args = {}".format(args))
-os.system("uname -a")
-print("TensorFlow version: {}".format(tf.__version__))
+    if hvd.rank()==0:
+        os.system("lscpu")
+        print("Started script on {}".format(datetime.datetime.now()))
 
+        print("args = {}".format(args))
+        os.system("uname -a")
+        print("TensorFlow version: {}".format(tf.__version__))
 
-print("Keras API version: {}".format(K.__version__))
+        print("Keras API version: {}".format(K.__version__))
+else:
+    os.system("lscpu")
+    print("Started script on {}".format(datetime.datetime.now()))
+
+    print("args = {}".format(args))
+    os.system("uname -a")
+    print("TensorFlow version: {}".format(tf.__version__))
+
+    print("Keras API version: {}".format(K.__version__))
+
 
 # Optimize CPU threads for TensorFlow
 config = tf.ConfigProto(
@@ -101,6 +118,9 @@ config = tf.ConfigProto(
     intra_op_parallelism_threads=args.intraop_threads)
 
 sess = tf.Session(config=config)
+
+import keras as K
+
 K.backend.set_session(sess)
 
 
@@ -127,12 +147,20 @@ def get_file_list(data_path=args.data_path):
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
 
+if args.horovod:
+    if (hvd.rank()==0):
+        print_summary=args.print_model
+    else:
+        print_summary=args.print_model
+else:
+    print_summary=args.print_model
+
 model = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
                 learning_rate=args.lr,
                 n_cl_out=1,  # single channel (greyscale)
                 dropout=0.5,
-                print_summary=True)
+                print_summary=print_summary, using_horovod=args.horovod)
 
 
 start_time = time.time()
@@ -154,7 +182,29 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
 # TensorBoard
 tb_logs = K.callbacks.TensorBoard(log_dir="./tensorboard_logs")
 
-callbacks_list = [checkpoint, tb_logs]
+if args.horovod:
+
+    hvd_callbacks = [
+    # Horovod: broadcast initial variable states from rank 0 to all other processes.
+    # This is necessary to ensure consistent initialization of all workers when
+    # training is started with random weights or restored from a checkpoint.
+    hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+
+    # Horovod: average metrics among workers at the end of every epoch.
+    #
+    # Note: This callback must be in the list before the ReduceLROnPlateau,
+    # TensorBoard or other metrics-based callbacks.
+    hvd.callbacks.MetricAverageCallback(),
+
+    # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
+    # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
+    # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
+    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1)]
+
+    callbacks_list = hvd_callbacks + [checkpoint, tb_logs]
+
+else:
+    callbacks_list = [checkpoint, tb_logs]
 
 # Separate file lists into train and test sets
 trainList, testList = get_file_list()
@@ -166,8 +216,13 @@ with open("testlist.txt", "w") as f:
     for item in testList:
         f.write("{}\n".format(item))
 
-print("Number of training MRIs = {}".format(len(trainList)))
-print("Number of test MRIs = {}".format(len(testList)))
+if args.horovod:
+    if hvd.rank()==0:
+        print("Number of training MRIs = {}".format(len(trainList)))
+        print("Number of test MRIs = {}".format(len(testList)))
+else:
+    print("Number of training MRIs = {}".format(len(trainList)))
+    print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
 # imgs_test = np.load("imgs_test_3d.npy")
@@ -179,7 +234,18 @@ training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "n_out_channels": 1,
                "augment": True,
                "shuffle": True}
-training_generator = DataGenerator(trainList, **training_data_params)
+if args.horovod:
+    shardLen = len(trainList) // hvd.size()
+    startShard = hvd.rank()*shardLen
+    if (hvd.rank() + 1) == hvd.size():
+        stopShard = len(trainList)
+    else:
+        stopShard = (hvd.rank()+1)*shardLen
+
+    shard = trainList[slice(startShard, stopShard)]
+    training_generator = DataGenerator(shard, **training_data_params)
+else:
+    training_generator = DataGenerator(trainList, **training_data_params)
 
 validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": 1,  # Use 1 so that we don't have partial batch
@@ -190,15 +256,34 @@ validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
-model.fit_generator(training_generator,
-          epochs=args.epochs, verbose=1,
-          validation_data=validation_generator,
-          callbacks=callbacks_list,
-          use_multiprocessing=True,
-          workers=3, max_queue_size=3)
+if args.horovod:
+    if hvd.rank() == 0:  # Only do validation and callbacks on chief
+        model.fit_generator(training_generator,
+                  epochs=args.epochs, verbose=1,
+                  validation_data=validation_generator,
+                  callbacks=callbacks_list,
+                  use_multiprocessing=True,
+                  workers=3, max_queue_size=3)
+    else:
+        model.fit_generator(training_generator,
+                  epochs=args.epochs, verbose=0,
+                  callbacks=hvd_callbacks, # Just do the horovod callbacks
+                  use_multiprocessing=True,
+                  workers=3, max_queue_size=3)
+else:
+    model.fit_generator(training_generator,
+              epochs=args.epochs, verbose=1,
+              validation_data=validation_generator,
+              callbacks=callbacks_list,
+              use_multiprocessing=True,
+              workers=3, max_queue_size=3)
 
-stop_time = time.time()
-
-print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
-
-print("Stopped script on {}".format(datetime.datetime.now()))
+if args.horovod:
+    if hvd.rank()==0:
+        stop_time = time.time()
+        print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
+        print("Stopped script on {}".format(datetime.datetime.now()))
+else:
+    stop_time = time.time()
+    print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
+    print("Stopped script on {}".format(datetime.datetime.now()))

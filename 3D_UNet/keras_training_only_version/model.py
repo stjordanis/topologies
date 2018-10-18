@@ -17,10 +17,12 @@
 
 import os.path
 import numpy as np
+
 import tensorflow as tf
+
 import keras as K
 
-def dice_coef(y_true, y_pred, axis=(1,2,3), smooth=1.):
+def dice_coef(y_true, y_pred, axis=(1, 2, 3), smooth=1.):
    intersection = tf.reduce_sum(y_true * y_pred, axis=axis)
    union = tf.reduce_sum(y_true + y_pred, axis=axis)
    numerator = tf.constant(2.) * intersection + smooth
@@ -28,165 +30,178 @@ def dice_coef(y_true, y_pred, axis=(1,2,3), smooth=1.):
    coef = numerator / denominator
    return tf.reduce_mean(coef)
 
-def dice_coef_loss(target, prediction, axis=(1,2,3), smooth=1.):
-	"""
-	Sorenson Dice loss
-	Using -log(Dice) as the loss since it is better behaved.
-	Also, the log allows avoidance of the division which
-	can help prevent underflow when the numbers are very small.
-	"""
-	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	p = tf.reduce_sum(prediction, axis=axis)
-	t = tf.reduce_sum(target, axis=axis)
-	numerator = tf.reduce_mean(intersection + smooth)
-	denominator = tf.reduce_mean(t + p + smooth)
-	dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
 
-	return dice_loss
+def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
+    """
+    Sorenson Dice loss
+    Using -log(Dice) as the loss since it is better behaved.
+    Also, the log allows avoidance of the division which
+    can help prevent underflow when the numbers are very small.
+    """
+    intersection = tf.reduce_sum(prediction * target, axis=axis)
+    p = tf.reduce_sum(prediction, axis=axis)
+    t = tf.reduce_sum(target, axis=axis)
+    numerator = tf.reduce_mean(intersection + smooth)
+    denominator = tf.reduce_mean(t + p + smooth)
+    dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
 
-def combined_dice_ce_loss(target, prediction, axis=(1,2,3), smooth=1.):
-	"""
-	Combined Dice and Binary Cross Entropy Loss
-	"""
-	return dice_coef_loss(target, prediction, axis, smooth) + K.losses.binary_crossentropy(target, prediction)
+    return dice_loss
+
+
+def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
+    """
+    Combined Dice and Binary Cross Entropy Loss
+    """
+    return dice_coef_loss(target, prediction, axis, smooth) + K.losses.binary_crossentropy(target, prediction)
+
 
 CHANNEL_LAST = True
 if CHANNEL_LAST:
-	concat_axis = -1
-	data_format = "channels_last"
+    concat_axis = -1
+    data_format = "channels_last"
 
 else:
-	concat_axis = 1
-	data_format = "channels_first"
+    concat_axis = 1
+    data_format = "channels_first"
+
 
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
-				 n_cl_out=1, dropout=0.2, print_summary = False):
+                 n_cl_out=1, dropout=0.2, print_summary=False,
+                 using_horovod=False):
 
-	inputs = K.layers.Input(shape=[None,None,None,1], name="Input_Image")
+    inputs = K.layers.Input(shape=[None, None, None, 1], name="Input_Image")
 
-	params = dict(kernel_size=(3, 3, 3), activation=None,
-				  padding="same", data_format=data_format,
-				  kernel_initializer="he_uniform")
+    params = dict(kernel_size=(3, 3, 3), activation=None,
+                  padding="same", data_format=data_format,
+                  kernel_initializer="he_uniform")
 
-	conv1 = K.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
-	conv1 = K.layers.BatchNormalization()(conv1)
-	conv1 = K.layers.Activation("relu")(conv1)
-	conv1 = K.layers.Conv3D(name="conv1b", filters=64, **params)(conv1)
-	conv1 = K.layers.BatchNormalization()(conv1)
-	conv1 = K.layers.Activation("relu")(conv1)
-	pool1 = K.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv1)
+    conv1 = K.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
+    conv1 = K.layers.BatchNormalization()(conv1)
+    conv1 = K.layers.Activation("relu")(conv1)
+    conv1 = K.layers.Conv3D(name="conv1b", filters=64, **params)(conv1)
+    conv1 = K.layers.BatchNormalization()(conv1)
+    conv1 = K.layers.Activation("relu")(conv1)
+    pool1 = K.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv1)
 
-	conv2 = K.layers.Conv3D(name="conv2a", filters=64, **params)(pool1)
-	conv2 = K.layers.BatchNormalization()(conv2)
-	conv2 = K.layers.Activation("relu")(conv2)
-	conv2 = K.layers.Conv3D(name="conv2b", filters=128, **params)(conv2)
-	conv2 = K.layers.BatchNormalization()(conv2)
-	conv2 = K.layers.Activation("relu")(conv2)
-	pool2 = K.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv2)
+    conv2 = K.layers.Conv3D(name="conv2a", filters=64, **params)(pool1)
+    conv2 = K.layers.BatchNormalization()(conv2)
+    conv2 = K.layers.Activation("relu")(conv2)
+    conv2 = K.layers.Conv3D(name="conv2b", filters=128, **params)(conv2)
+    conv2 = K.layers.BatchNormalization()(conv2)
+    conv2 = K.layers.Activation("relu")(conv2)
+    pool2 = K.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv2)
 
-	conv3 = K.layers.Conv3D(name="conv3a", filters=128, **params)(pool2)
-	conv3 = K.layers.BatchNormalization()(conv3)
-	conv3 = K.layers.Activation("relu")(conv3)
-	### Trying dropout layers earlier on, as indicated in the paper
-	conv3 = K.layers.Dropout(dropout)(conv3)
-	conv3 = K.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
-	conv3 = K.layers.BatchNormalization()(conv3)
-	conv3 = K.layers.Activation("relu")(conv3)
-	pool3 = K.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv3)
+    conv3 = K.layers.Conv3D(name="conv3a", filters=128, **params)(pool2)
+    conv3 = K.layers.BatchNormalization()(conv3)
+    conv3 = K.layers.Activation("relu")(conv3)
+    # Trying dropout layers earlier on, as indicated in the paper
+    conv3 = K.layers.Dropout(dropout)(conv3)
+    conv3 = K.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
+    conv3 = K.layers.BatchNormalization()(conv3)
+    conv3 = K.layers.Activation("relu")(conv3)
+    pool3 = K.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv3)
 
-	conv4 = K.layers.Conv3D(name="conv4a", filters=256, **params)(pool3)
-	conv4 = K.layers.BatchNormalization()(conv4)
-	conv4 = K.layers.Activation("relu")(conv4)
-	### Trying dropout layers earlier on, as indicated in the paper
-	conv4 = K.layers.Dropout(dropout)(conv4)
+    conv4 = K.layers.Conv3D(name="conv4a", filters=256, **params)(pool3)
+    conv4 = K.layers.BatchNormalization()(conv4)
+    conv4 = K.layers.Activation("relu")(conv4)
+    # Trying dropout layers earlier on, as indicated in the paper
+    conv4 = K.layers.Dropout(dropout)(conv4)
 
-	conv4 = K.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
-	conv4 = K.layers.BatchNormalization()(conv4)
-	conv4 = K.layers.Activation("relu")(conv4)
+    conv4 = K.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
+    conv4 = K.layers.BatchNormalization()(conv4)
+    conv4 = K.layers.Activation("relu")(conv4)
 
-	if use_upsampling:
-		up = K.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4)
-	else:
-		up = K.layers.Conv3DTranspose(name="transConv4", filters=512,
-									  data_format=data_format,
-						   			  kernel_size=(2, 2, 2),
-									  strides=(2, 2, 2),
-									  padding="same")(conv4)
+    if use_upsampling:
+        up = K.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4)
+    else:
+        up = K.layers.Conv3DTranspose(name="transConv4", filters=512,
+                                      data_format=data_format,
+                                         kernel_size=(2, 2, 2),
+                                      strides=(2, 2, 2),
+                                      padding="same")(conv4)
 
-	up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
+    up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
 
-	conv5 = K.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
-	conv5 = K.layers.BatchNormalization()(conv5)
-	conv5 = K.layers.Activation("relu")(conv5)
-	conv5 = K.layers.Conv3D(name="conv5b", filters=256, **params)(conv5)
-	conv5 = K.layers.BatchNormalization()(conv5)
-	conv5 = K.layers.Activation("relu")(conv5)
+    conv5 = K.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
+    conv5 = K.layers.BatchNormalization()(conv5)
+    conv5 = K.layers.Activation("relu")(conv5)
+    conv5 = K.layers.Conv3D(name="conv5b", filters=256, **params)(conv5)
+    conv5 = K.layers.BatchNormalization()(conv5)
+    conv5 = K.layers.Activation("relu")(conv5)
 
-	if use_upsampling:
-		up = K.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5)
-	else:
-		up = K.layers.Conv3DTranspose(name="transConv5",
-							          filters=256, data_format=data_format,
-						   			  kernel_size=(2, 2, 2),
-									  strides=(2, 2, 2),
-									  padding="same")(conv5)
+    if use_upsampling:
+        up = K.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5)
+    else:
+        up = K.layers.Conv3DTranspose(name="transConv5",
+                                      filters=256, data_format=data_format,
+                                         kernel_size=(2, 2, 2),
+                                      strides=(2, 2, 2),
+                                      padding="same")(conv5)
 
-	up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
+    up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
 
-	conv6 = K.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
-	conv6 = K.layers.BatchNormalization()(conv6)
-	conv6 = K.layers.Activation("relu")(conv6)
-	conv6 = K.layers.Conv3D(name="conv6b", filters=128, **params)(conv6)
-	conv6 = K.layers.BatchNormalization()(conv6)
-	conv6 = K.layers.Activation("relu")(conv6)
+    conv6 = K.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
+    conv6 = K.layers.BatchNormalization()(conv6)
+    conv6 = K.layers.Activation("relu")(conv6)
+    conv6 = K.layers.Conv3D(name="conv6b", filters=128, **params)(conv6)
+    conv6 = K.layers.BatchNormalization()(conv6)
+    conv6 = K.layers.Activation("relu")(conv6)
 
-	if use_upsampling:
-		up = K.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6)
-	else:
-		up = K.layers.Conv3DTranspose(name="transConv6",
-									  filters=128, data_format=data_format,
-						   			  kernel_size=(2, 2, 2),
-									  strides=(2, 2, 2),
-									  padding="same")(conv6)
+    if use_upsampling:
+        up = K.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6)
+    else:
+        up = K.layers.Conv3DTranspose(name="transConv6",
+                                      filters=128, data_format=data_format,
+                                         kernel_size=(2, 2, 2),
+                                      strides=(2, 2, 2),
+                                      padding="same")(conv6)
 
-	up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
+    up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
 
-	conv7 = K.layers.Conv3D(name="conv7a", filters=64, **params)(up6)
-	conv7 = K.layers.BatchNormalization()(conv7)
-	conv7 = K.layers.Activation("relu")(conv7)
-	conv7 = K.layers.Conv3D(name="conv7b", filters=64, **params)(conv7)
-	conv7 = K.layers.BatchNormalization()(conv7)
-	conv7 = K.layers.Activation("relu")(conv7)
-	pred = K.layers.Conv3D(name="Prediction_Mask", filters=n_cl_out,
-						   kernel_size=(1, 1, 1),
-						   data_format=data_format,
-						   activation="sigmoid")(conv7)
+    conv7 = K.layers.Conv3D(name="conv7a", filters=64, **params)(up6)
+    conv7 = K.layers.BatchNormalization()(conv7)
+    conv7 = K.layers.Activation("relu")(conv7)
+    conv7 = K.layers.Conv3D(name="conv7b", filters=64, **params)(conv7)
+    conv7 = K.layers.BatchNormalization()(conv7)
+    conv7 = K.layers.Activation("relu")(conv7)
+    pred = K.layers.Conv3D(name="Prediction_Mask", filters=n_cl_out,
+                           kernel_size=(1, 1, 1),
+                           data_format=data_format,
+                           activation="sigmoid")(conv7)
 
-	model = K.models.Model(inputs=[inputs], outputs=[pred])
+    model = K.models.Model(inputs=[inputs], outputs=[pred])
 
-	if print_summary:
-		model.summary()
 
-	model.compile(optimizer=K.optimizers.Adam(learning_rate),
-				  #loss=[combined_dice_ce_loss],
+    if print_summary:
+        model.summary()
+
+    if using_horovod:
+        import horovod.keras as hvd
+        opt = K.optimizers.Adam(learning_rate*hvd.size())
+        opt = hvd.DistributedOptimizer(opt)
+    else:
+        opt = K.optimizers.Adam(learning_rate)
+
+    model.compile(optimizer=opt,
+                  # loss=[combined_dice_ce_loss],
                   loss=[dice_coef_loss],
-				  metrics=[dice_coef, "accuracy",
-				  		   sensitivity, specificity])
+                  metrics=[dice_coef, "accuracy",
+                             sensitivity, specificity])
 
 
-	return model
+    return model
 
 
 def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
 
-	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	coef = (intersection + smooth) / (tf.reduce_sum(target,
-												    axis=axis) + smooth)
-	return tf.reduce_mean(coef)
+    intersection = tf.reduce_sum(prediction * target, axis=axis)
+    coef = (intersection + smooth) / (tf.reduce_sum(target,
+                                                    axis=axis) + smooth)
+    return tf.reduce_mean(coef)
 
 def specificity(target, prediction, axis=(1,2,3), smooth = 1. ):
 
-	intersection = tf.reduce_sum(prediction * target, axis=axis)
-	coef = (intersection + smooth) / (tf.reduce_sum(prediction,
-													axis=axis) + smooth)
-	return tf.reduce_mean(coef)
+    intersection = tf.reduce_sum(prediction * target, axis=axis)
+    coef = (intersection + smooth) / (tf.reduce_sum(prediction,
+                                                    axis=axis) + smooth)
+    return tf.reduce_mean(coef)
