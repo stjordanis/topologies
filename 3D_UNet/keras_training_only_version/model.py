@@ -52,7 +52,7 @@ def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
     Combined Dice and Binary Cross Entropy Loss
     """
-    return dice_coef_loss(target, prediction, axis, smooth) +
+    return dice_coef_loss(target, prediction, axis, smooth) + \
             K.losses.binary_crossentropy(target, prediction)
 
 
