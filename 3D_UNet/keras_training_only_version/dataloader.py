@@ -1,0 +1,174 @@
+import keras as K
+import numpy as np
+import os
+
+import nibabel as nib
+
+
+class DataGenerator(K.utils.Sequence):
+    """
+    Generates data for Keras/TensorFlow
+
+    Code based on https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
+
+    This uses the Keras Sequence which is better for multiprocessing.
+    The main input the dataloader is a list of filenames containing
+    the images (MRIs) to load. In the case of BraTS, the images and masks
+    have the same name but a different suffix. For example, the FLAIR image
+    could be "MRI1234_flair.nii.gz" and the corresponding mask would be
+    "MRI1234_seg.nii.gz".
+
+    If you have a different type of dataset, you'll just need to
+    change the loading code in self.__data_generation to return
+    the correct image and label.
+
+    """
+    def __init__(self,
+                 list_IDs,     # List of file names for raw images/masks
+                 batch_size=8, # batch size
+                 dim=(128,128,128),  # Dimension of images/masks
+                 n_in_channels=1,  # Number of channels in image
+                 n_out_channels=1, # Number of channels in mask
+                 shuffle=True,  # Shuffle list after each epoch
+                 augment=False):   # Augment images
+        """
+        Initialization
+        """
+        self.dim = dim
+        self.batch_size = batch_size
+        self.list_IDs = list_IDs
+        self.n_in_channels = n_in_channels
+        self.n_out_channels = n_out_channels
+        self.shuffle = shuffle
+        self.augment = augment
+        self.on_epoch_end()
+
+    def __len__(self):
+        """
+        The number of batches per epoch
+        """
+        return len(self.list_IDs) // self.batch_size
+
+    def __getitem__(self, index):
+        """
+        Generate one batch of data
+        """
+        # Generate indexes of the batch
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+
+        # Find list of IDs
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+        # Generate data
+        X, y = self.__data_generation(list_IDs_temp)
+
+        return X, y
+
+    def on_epoch_end(self):
+        """
+        Updates indexes after each epoch
+        If shuffle is true, then it will shuffle the training set
+        after every epoch.
+        """
+        self.indexes = np.arange(len(self.list_IDs))
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+
+    def crop_img(self, img, msk, randomize=True):
+        """
+        Crop the image and mask
+        """
+        cropx, cropy, cropz = self.dim
+
+        x, y, z = img.shape
+
+        startx = (x-cropx)//2
+        starty = (y-cropy)//2
+        startz = (z-cropz)//2
+
+        offsetx = 10  # Number of pixels to offset crop in X dimension
+        offsety = 10  # Number of pixels to offset crop in Y dimension
+        offsetz = 10  # Number of pixels to offset crop in Z dimension
+
+        if randomize and (np.random.rand() > 0.5):
+            startx += np.random.choice(range(-offsetx, offsetx))
+            if ((startx + cropx) > x):  # Don't fall off the image
+                startx = (x-cropx)//2
+
+            starty += np.random.choice(range(-offsety, offsety))
+            if ((starty + cropy) > y):  # Don't fall off the image
+                starty = (y-cropy)//2
+
+            startz += np.random.choice(range(-offsetz, offsetz))
+            if ((startz + cropz) > z):  # Don't fall off the image
+                startz = (z-cropz)//2
+
+        slicex = slice(startx, startx+cropx)
+        slicey = slice(starty, starty+cropy)
+        slicez = slice(startz, startz+cropz)
+
+        return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
+
+
+    def augment_data(self, img, msk):
+        """
+        Data augmentation
+        Flip image and mask. Rotate image and mask.
+        """
+
+        if np.random.rand() > 0.5:
+            ax = np.random.choice([0, 1, 2])  # Random 0,1,2 (axes to flip)
+            img = np.flip(img, ax)
+            msk = np.flip(msk, ax)
+
+        elif np.random.rand() > 0.5:
+            rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
+            img = np.rot90(img, rot)
+            msk = np.rot90(msk, rot)
+
+        return img, msk
+
+    def z_normalize_img(self, img):
+        """
+        Normalize the image so that the mean value for each image
+        is 0 and the standard deviation is 1.
+        """
+        return (img - np.mean(img)) / np.std(img)
+
+    def __data_generation(self, list_IDs_temp):
+        """
+        Generates data containing batch_size samples
+        """
+
+        # Make empty arrays for the images and mask batches
+        imgs = np.empty((self.batch_size, self.dim[0], self.dim[1],
+                         self.dim[2], self.n_in_channels))
+        msks = np.empty((self.batch_size, self.dim[0], self.dim[1],
+                         self.dim[2], self.n_out_channels))
+
+        idx = 0
+        for file in list_IDs_temp:
+
+            imgFile = os.path.join(file, os.path.basename(file) + "_flair.nii.gz")
+            mskFile = os.path.join(file, os.path.basename(file) + "_seg.nii.gz")
+
+            img = np.array(nib.load(imgFile).dataobj)
+
+            msk = np.array(nib.load(mskFile).dataobj)
+            msk[msk > 0] = 1.0   # Combine masks to get whole tumor
+
+            # Take a crop of the patch_dim size
+            img, msk = self.crop_img(img, msk, self.augment)
+
+            img = self.z_normalize_img(img)  # Normalize the image
+
+            # Data augmentation
+            if self.augment and (np.random.rand() > 0.5):
+                img, msk = self.augment_data(img, msk)
+
+            imgs[idx, :, :, :, 0] = img
+            msks[idx, :, :, :, 0] = msk
+
+            idx += 1
+
+        return imgs, msks

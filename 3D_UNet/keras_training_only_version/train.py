@@ -15,8 +15,6 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-# TODO: Try https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
-
 import keras as K
 import numpy as np
 import random
@@ -28,6 +26,8 @@ import datetime
 import tensorflow as tf
 from model import *
 import nibabel as nib
+
+from dataloader import DataGenerator
 
 parser = argparse.ArgumentParser(
     description="Train 3D U-Net model", add_help=True)
@@ -128,100 +128,6 @@ def get_file_list(data_path=args.data_path):
 
     return trainList, testList
 
-
-def get_batch(fileList, batch_start=0, batch_size=args.bz, randomize=True):
-    """
-    Get a single batch of images and masks
-    """
-    def crop_img(img, msk, randomize=True,
-                 cropx=args.patch_dim,
-                 cropy=args.patch_dim,
-                 cropz=args.patch_dim):
-        """
-        Crop the image and mask
-        """
-        x, y, z = img.shape
-
-        startx = (x-cropx)//2
-        starty = (y-cropy)//2
-        startz = (z-cropz)//2
-
-        if randomize and (np.random.rand() > 0.5):
-            startx += np.random.choice(range(-10, 10))
-            if ((startx + cropx) > x):  # Don't fall off the image
-                startx = (x-cropx)//2
-
-            starty += np.random.choice(range(-10, 10))
-            if ((starty + cropy) > y):  # Don't fall off the image
-                starty = (y-cropy)//2
-
-            startz += np.random.choice(range(-10, 10))
-            if ((startz + cropz) > z):  # Don't fall off the image
-                startz = (z-cropz)//2
-
-        slicex = slice(startx, startx+cropx)
-        slicey = slice(starty, starty+cropy)
-        slicez = slice(startz, startz+cropz)
-        return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
-
-    # random.shuffle(fileList)
-    files = fileList[batch_start:(batch_start+batch_size)]
-
-    imgs = np.zeros((batch_size, args.patch_dim,
-                     args.patch_dim, args.patch_dim, 1))
-    msks = np.zeros((batch_size, args.patch_dim,
-                     args.patch_dim, args.patch_dim, 1))
-
-    idx = 0
-    for file in files:
-
-        imgFile = os.path.join(file, os.path.basename(file) + "_flair.nii.gz")
-        mskFile = os.path.join(file, os.path.basename(file) + "_seg.nii.gz")
-
-        img = np.array(nib.load(imgFile).dataobj)
-
-        msk = np.array(nib.load(mskFile).dataobj)
-        msk[msk > 0] = 1.0   # Combine masks to get whole tumor
-
-        # Take a crop of the patch_dim size
-        img, msk = crop_img(img, msk, randomize)
-
-        img = (img - np.mean(img)) / np.std(img)  # z normalize image
-
-        # Data augmentation
-        if randomize and (np.random.rand() > 0.5):
-            if np.random.rand() > 0.5:
-                ax = np.random.choice([0, 1, 2])  # Random 0,1,2 (axes to flip)
-                img = np.flip(img, ax)
-                msk = np.flip(msk, ax)
-
-            elif np.random.rand() > 0.5:
-                rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
-                img = np.rot90(img, rot)
-                msk = np.rot90(msk, rot)
-
-        imgs[idx, :, :, :, 0] = img
-        msks[idx, :, :, :, 0] = msk
-
-        idx += 1
-
-    return imgs, msks
-
-
-def batch_generator(fileList, batch_size=args.bz, randomize=True):
-    """
-    Batch generator for getting imgs and masks
-    """
-    batch_start = 0
-    while True:
-        imgs, msks = get_batch(fileList, batch_start, batch_size, randomize)
-        if ((batch_start + batch_size) > len(fileList)):
-            batch_start = 0
-        else:
-            batch_start += batch_size
-        yield imgs, msks
-
-
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
 
 model = unet_3d(input_shape=input_shape,
@@ -269,15 +175,32 @@ print("Number of training MRIs = {}".format(len(trainList)))
 print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
-imgs_test = np.load("imgs_test_3d.npy")
-msks_test = np.load("msks_test_3d.npy")
+# imgs_test = np.load("imgs_test_3d.npy")
+# msks_test = np.load("msks_test_3d.npy")
+
+training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
+               "batch_size": args.bz,
+               "n_in_channels": 1,
+               "n_out_channels": 1,
+               "augment": True,
+               "shuffle": True}
+training_generator = DataGenerator(trainList, **training_data_params)
+
+validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
+               "batch_size": args.bz,
+               "n_in_channels": 1,
+               "n_out_channels": 1,
+               "augment": False,
+               "shuffle": False}
+validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
-model.fit_generator(batch_generator(trainList, args.bz, True),
-                    steps_per_epoch=len(trainList)//args.bz,
-                    epochs=args.epochs, verbose=1,
-                    validation_data=(imgs_test, msks_test),
-                    callbacks=callbacks_list)
+model.fit_generator(training_generator,
+          epochs=args.epochs, verbose=1,
+          validation_data=validation_generator,
+          callbacks=callbacks_list,
+          use_multiprocessing=True,
+          workers=3)
 
 stop_time = time.time()
 
