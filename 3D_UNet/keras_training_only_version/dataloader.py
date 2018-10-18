@@ -79,40 +79,31 @@ class DataGenerator(K.utils.Sequence):
         """
         Crop the image and mask
         """
-        cropx, cropy, cropz = self.dim
 
-        x, y, z = img.shape
+        slicex = []
 
-        startx = (x-cropx)//2
-        starty = (y-cropy)//2
-        startz = (z-cropz)//2
+        # Only randomize half when asked
+        randomize = randomize and (np.random.rand() > 0.5)
 
-        ratio_crop = 0.25  # Crop up this this % of pixels around the start for offset
-        # Number of pixels to offset crop in X dimension
-        offsetx = int(np.floor(startx*ratio_crop))
-        # Number of pixels to offset crop in Y dimension
-        offsety = int(np.floor(starty*ratio_crop))
-        # Number of pixels to offset crop in Z dimension
-        offsetz = int(np.floor(startz*ratio_crop))
+        for idx in range(len(self.dim)):
 
-        if randomize and (np.random.rand() > 0.5):
-            startx += np.random.choice(range(-offsetx, offsetx))
-            if ((startx + cropx) > x):  # Don't fall off the image
-                startx = (x-cropx)//2
+            cropLen = self.dim[idx]
+            imgLen = img.shape[idx]
 
-            starty += np.random.choice(range(-offsety, offsety))
-            if ((starty + cropy) > y):  # Don't fall off the image
-                starty = (y-cropy)//2
+            startx = (imgLen-cropLen)//2
 
-            startz += np.random.choice(range(-offsetz, offsetz))
-            if ((startz + cropz) > z):  # Don't fall off the image
-                startz = (z-cropz)//2
+            ratio_crop = 0.10  # Crop up this this % of pixels for offset
+            # Number of pixels to offset crop in X dimension
+            offsetx = int(np.floor(startx*ratio_crop))
 
-        slicex = slice(startx, startx+cropx)
-        slicey = slice(starty, starty+cropy)
-        slicez = slice(startz, startz+cropz)
+            if randomize:
+                startx += np.random.choice(range(-offsetx, offsetx))
+                if ((startx + cropLen) > imgLen):  # Don't fall off the image
+                    startx = (imgLen-cropLen)//2
 
-        return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
+            slicex.append(slice(startx, startx+cropLen))
+
+        return img[tuple(slicex)], msk[tuple(slicex)]
 
     def augment_data(self, img, msk):
         """

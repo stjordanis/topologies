@@ -195,7 +195,7 @@ model.fit_generator(training_generator,
           validation_data=validation_generator,
           callbacks=callbacks_list,
           use_multiprocessing=True,
-          workers=3)
+          workers=3, max_queue_size=3)
 
 stop_time = time.time()
 
