@@ -23,17 +23,22 @@ import tensorflow as tf
 import keras as K
 
 def dice_coef(y_true, y_pred, axis=(1, 2, 3), smooth=1.):
-   intersection = tf.reduce_sum(y_true * y_pred, axis=axis)
-   union = tf.reduce_sum(y_true + y_pred, axis=axis)
-   numerator = tf.constant(2.) * intersection + smooth
-   denominator = union + smooth
-   coef = numerator / denominator
-   return tf.reduce_mean(coef)
+    """
+    Sorenson (Soft) Dice
+    2 * |TP| / |T|*|P|
+    where T is ground truth mask and P is the prediction mask
+    """
+    intersection = tf.reduce_sum(y_true * y_pred, axis=axis)
+    union = tf.reduce_sum(y_true + y_pred, axis=axis)
+    numerator = tf.constant(2.) * intersection + smooth
+    denominator = union + smooth
+    coef = numerator / denominator
 
+    return tf.reduce_mean(coef)
 
 def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
-    Sorenson Dice loss
+    Sorenson (Soft) Dice loss
     Using -log(Dice) as the loss since it is better behaved.
     Also, the log allows avoidance of the division which
     can help prevent underflow when the numbers are very small.
@@ -47,14 +52,12 @@ def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
 
     return dice_loss
 
-
 def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
     Combined Dice and Binary Cross Entropy Loss
     """
     return dice_coef_loss(target, prediction, axis, smooth) + \
-            K.losses.binary_crossentropy(target, prediction)
-
+           K.losses.binary_crossentropy(target, prediction)
 
 CHANNEL_LAST = True
 if CHANNEL_LAST:
@@ -64,7 +67,6 @@ if CHANNEL_LAST:
 else:
     concat_axis = 1
     data_format = "channels_first"
-
 
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                  n_cl_out=1, dropout=0.2, print_summary=False,
@@ -120,7 +122,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     else:
         up = K.layers.Conv3DTranspose(name="transConv4", filters=512,
                                       data_format=data_format,
-                                         kernel_size=(2, 2, 2),
+                                      kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
                                       padding="same")(conv4)
 
@@ -138,7 +140,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     else:
         up = K.layers.Conv3DTranspose(name="transConv5",
                                       filters=256, data_format=data_format,
-                                         kernel_size=(2, 2, 2),
+                                      kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
                                       padding="same")(conv5)
 
@@ -156,7 +158,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     else:
         up = K.layers.Conv3DTranspose(name="transConv6",
                                       filters=128, data_format=data_format,
-                                         kernel_size=(2, 2, 2),
+                                      kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
                                       padding="same")(conv6)
 
@@ -175,7 +177,6 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
 
     model = K.models.Model(inputs=[inputs], outputs=[pred])
 
-
     if print_summary:
         model.summary()
 
@@ -190,8 +191,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                   # loss=[combined_dice_ce_loss],
                   loss=[dice_coef_loss],
                   metrics=[dice_coef, "accuracy",
-                             sensitivity, specificity])
-
+                           sensitivity, specificity])
 
     return model
 
@@ -205,7 +205,7 @@ def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
                                                     axis=axis) + smooth)
     return tf.reduce_mean(coef)
 
-def specificity(target, prediction, axis=(1,2,3), smooth = 1. ):
+def specificity(target, prediction, axis=(1,2,3), smooth = 1.):
     """
     Specificity
     """
