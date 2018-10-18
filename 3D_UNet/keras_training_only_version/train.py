@@ -145,9 +145,9 @@ except:
     os.mkdir(directory)
 
 if os.path.isfile(args.saved_model):
-    model.load_weights(args.saved_model_name)
+    model.load_weights(args.saved_model)
 
-checkpoint = K.callbacks.ModelCheckpoint(args.saved_model_name,
+checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
                                          verbose=1,
                                          save_best_only=True)
 
