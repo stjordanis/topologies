@@ -23,12 +23,13 @@ class DataGenerator(K.utils.Sequence):
     the correct image and label.
 
     """
+
     def __init__(self,
                  list_IDs,     # List of file names for raw images/masks
-                 batch_size=8, # batch size
-                 dim=(128,128,128),  # Dimension of images/masks
+                 batch_size=8,  # batch size
+                 dim=(128, 128, 128),  # Dimension of images/masks
                  n_in_channels=1,  # Number of channels in image
-                 n_out_channels=1, # Number of channels in mask
+                 n_out_channels=1,  # Number of channels in mask
                  shuffle=True,  # Shuffle list after each epoch
                  augment=False):   # Augment images
         """
@@ -86,9 +87,13 @@ class DataGenerator(K.utils.Sequence):
         starty = (y-cropy)//2
         startz = (z-cropz)//2
 
-        offsetx = 10  # Number of pixels to offset crop in X dimension
-        offsety = 10  # Number of pixels to offset crop in Y dimension
-        offsetz = 10  # Number of pixels to offset crop in Z dimension
+        ratio_crop = 0.25  # Crop up this this % of pixels around the start for offset
+        # Number of pixels to offset crop in X dimension
+        offsetx = int(np.floor(startx*ratio_crop))
+        # Number of pixels to offset crop in Y dimension
+        offsety = int(np.floor(starty*ratio_crop))
+        # Number of pixels to offset crop in Z dimension
+        offsetz = int(np.floor(startz*ratio_crop))
 
         if randomize and (np.random.rand() > 0.5):
             startx += np.random.choice(range(-offsetx, offsetx))
@@ -109,7 +114,6 @@ class DataGenerator(K.utils.Sequence):
 
         return img[slicex, slicey, slicez], msk[slicex, slicey, slicez]
 
-
     def augment_data(self, img, msk):
         """
         Data augmentation
@@ -117,7 +121,7 @@ class DataGenerator(K.utils.Sequence):
         """
 
         if np.random.rand() > 0.5:
-            ax = np.random.choice([0, 1, 2])  # Random 0,1,2 (axes to flip)
+            ax = np.random.choice(np.arange(len(self.dim)))  # Random 0,1,2 (axes to flip)
             img = np.flip(img, ax)
             msk = np.flip(msk, ax)
 
@@ -141,16 +145,16 @@ class DataGenerator(K.utils.Sequence):
         """
 
         # Make empty arrays for the images and mask batches
-        imgs = np.empty((self.batch_size, self.dim[0], self.dim[1],
-                         self.dim[2], self.n_in_channels))
-        msks = np.empty((self.batch_size, self.dim[0], self.dim[1],
-                         self.dim[2], self.n_out_channels))
+        imgs = np.empty((self.batch_size, *self.dim, self.n_in_channels))
+        msks = np.empty((self.batch_size, *self.dim, self.n_out_channels))
 
         idx = 0
         for file in list_IDs_temp:
 
-            imgFile = os.path.join(file, os.path.basename(file) + "_flair.nii.gz")
-            mskFile = os.path.join(file, os.path.basename(file) + "_seg.nii.gz")
+            imgFile = os.path.join(
+                file, os.path.basename(file) + "_flair.nii.gz")
+            mskFile = os.path.join(
+                file, os.path.basename(file) + "_seg.nii.gz")
 
             img = np.array(nib.load(imgFile).dataobj)
 
@@ -166,8 +170,8 @@ class DataGenerator(K.utils.Sequence):
             if self.augment and (np.random.rand() > 0.5):
                 img, msk = self.augment_data(img, msk)
 
-            imgs[idx, :, :, :, 0] = img
-            msks[idx, :, :, :, 0] = msk
+            imgs[idx,] = np.expand_dims(img, -1)
+            msks[idx,] = np.expand_dims(msk, -1)
 
             idx += 1
 
