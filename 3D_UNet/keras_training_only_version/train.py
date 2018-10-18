@@ -147,7 +147,7 @@ try:
 except:
     os.mkdir(directory)
 
-saved_model_name = os.path.join(directory, args.model_filename)
+saved_model_name = os.path.join(args.saved_model_path, args.model_filename)
 
 if os.path.isfile(saved_model_name):
     model.load_weights(saved_model_name)
