@@ -242,7 +242,7 @@ training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "shuffle": True}
 
 if args.horovod:
-    shardLen = 2 #len(trainList) // hvd.size()
+    shardLen = len(trainList) // hvd.size()
     startShard = hvd.rank()*shardLen
     if (hvd.rank() + 1) == hvd.size():
         stopShard = len(trainList)
