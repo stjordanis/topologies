@@ -174,8 +174,8 @@ try:
 except:
     os.mkdir(directory)
 
-if os.path.isfile(args.saved_model):
-    model.load_weights(args.saved_model)
+# if os.path.isfile(args.saved_model):
+#     model.load_weights(args.saved_model)
 
 checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
                                          verbose=1,
