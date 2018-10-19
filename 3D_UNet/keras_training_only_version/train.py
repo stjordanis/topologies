@@ -229,11 +229,11 @@ else:
 # Run the script  "load_brats_images.py" to generate these Numpy data files
 try:
     imgs_test = np.load("imgs_test_3d.npy")
-except Exception,e: print("{}".format(e))
+except Exception as e: print(e)
 
 try:
     msks_test = np.load("msks_test_3d.npy")
-except Exception,e: print("{}".format(e))
+except Exception as e: print(e)
 
 training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": args.bz,
