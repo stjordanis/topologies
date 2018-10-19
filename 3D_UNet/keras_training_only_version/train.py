@@ -227,8 +227,8 @@ else:
     print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
-# imgs_test = np.load("imgs_test_3d.npy")
-# msks_test = np.load("msks_test_3d.npy")
+imgs_test = np.load("imgs_test_3d.npy")
+msks_test = np.load("msks_test_3d.npy")
 
 training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": args.bz,
@@ -236,8 +236,9 @@ training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "n_out_channels": 1,
                "augment": True,
                "shuffle": True}
+
 if args.horovod:
-    shardLen = len(trainList) // hvd.size()
+    shardLen = 2 #len(trainList) // hvd.size()
     startShard = hvd.rank()*shardLen
     if (hvd.rank() + 1) == hvd.size():
         stopShard = len(trainList)
@@ -249,36 +250,35 @@ if args.horovod:
 else:
     training_generator = DataGenerator(trainList, **training_data_params)
 
-validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
-               "batch_size": 1,  # Use 1 so that we don't have partial batch
-               "n_in_channels": 1,
-               "n_out_channels": 1,
-               "augment": False,
-               "shuffle": False}
-validation_generator = DataGenerator(testList, **validation_data_params)
+# validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
+#                "batch_size": 1,  # Use 1 so that we don't have partial batch
+#                "n_in_channels": 1,
+#                "n_out_channels": 1,
+#                "augment": False,
+#                "shuffle": False}
+# validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 if args.horovod:
     if hvd.rank() == 0:  # Only do validation and callbacks on chief
         model.fit_generator(training_generator,
                   epochs=args.epochs, verbose=1,
-                  validation_data=validation_generator,
-                  callbacks=callbacks_list,
-                  use_multiprocessing=True,
-                  workers=3, max_queue_size=3)
+                  #validation_data=validation_generator,
+                  validation_data=(imgs_test,msks_test),
+                  callbacks=callbacks_list)
     else:
         model.fit_generator(training_generator,
                   epochs=args.epochs, verbose=0,
-                  callbacks=hvd_callbacks, # Just do the horovod callbacks
-                  use_multiprocessing=True,
-                  workers=3, max_queue_size=3)
+                  #validation_data=validation_generator,
+                  validation_data=(imgs_test,msks_test),
+                  callbacks=hvd_callbacks # Just do the horovod callbacks
+                  )
 else:
     model.fit_generator(training_generator,
               epochs=args.epochs, verbose=1,
-              validation_data=validation_generator,
-              callbacks=callbacks_list,
-              use_multiprocessing=True,
-              workers=3, max_queue_size=3)
+              #validation_data=validation_generator,
+              validation_data=(imgs_test,msks_test),
+              callbacks=callbacks_list)
 
 if args.horovod:
     if hvd.rank()==0:
