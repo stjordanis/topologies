@@ -227,12 +227,13 @@ else:
     print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
-if not os.path.isfile("imgs_test_3d.npy"):
-    error("Please run `python load_brats_images.py` to create the validation dataset")
-if not os.path.isfile("msks_test_3d.npy"):
-    error("Please run `python load_brats_images.py` to create the validation dataset")
-imgs_test = np.load("imgs_test_3d.npy")
-msks_test = np.load("msks_test_3d.npy")
+try:
+    imgs_test = np.load("imgs_test_3d.npy")
+except Exception,e: print("{}".format(e))
+
+try:
+    msks_test = np.load("msks_test_3d.npy")
+except Exception,e: print("{}".format(e))
 
 training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": args.bz,
