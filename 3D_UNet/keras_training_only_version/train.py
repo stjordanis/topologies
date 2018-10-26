@@ -254,14 +254,14 @@ validation_generator = DataGenerator(testList, **validation_data_params)
 if args.horovod:
     if hvd.rank() == 0:  # Only do validation and callbacks on chief
         model.fit_generator(training_generator,
-                  steps_per_epoch=len(trainlist)//(args.bz*hvd.size()),
+                  steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=1,
                   validation_data=validation_generator,
                   #validation_data=(imgs_test,msks_test),
                   callbacks=callbacks_list)
     else:
         model.fit_generator(training_generator,
-                  steps_per_epoch=len(trainlist)//(args.bz*hvd.size()),
+                  steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=0,
                   validation_data=validation_generator,
                   #validation_data=(imgs_test,msks_test),
