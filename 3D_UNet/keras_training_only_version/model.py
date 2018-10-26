@@ -101,7 +101,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     conv3 = K.layers.BatchNormalization()(conv3)
     conv3 = K.layers.Activation("relu")(conv3)
     # Trying dropout layers earlier on, as indicated in the paper
-    conv3 = K.layers.Dropout(dropout)(conv3)
+    conv3 = K.layers.SpatialDropout3D(dropout)(conv3)
     conv3 = K.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
     conv3 = K.layers.BatchNormalization()(conv3)
     conv3 = K.layers.Activation("relu")(conv3)
@@ -111,7 +111,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     conv4 = K.layers.BatchNormalization()(conv4)
     conv4 = K.layers.Activation("relu")(conv4)
     # Trying dropout layers earlier on, as indicated in the paper
-    conv4 = K.layers.Dropout(dropout)(conv4)
+    conv4 = K.layers.SpatialDropout3D(dropout)(conv4)
 
     conv4 = K.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
     conv4 = K.layers.BatchNormalization()(conv4)

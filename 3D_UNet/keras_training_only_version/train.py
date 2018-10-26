@@ -57,11 +57,11 @@ parser.add_argument("--intraop_threads",
                     help="Number of intraop threads")
 parser.add_argument("--interop_threads",
                     type=int,
-                    default=2,
+                    default=1,
                     help="Number of interop threads")
 parser.add_argument("--blocktime",
                     type=int,
-                    default=0,
+                    default=1,
                     help="Block time for CPU threads")
 parser.add_argument("--print_model",
                     action="store_true",
@@ -71,7 +71,7 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
-datapath="/home/bduser/data/Brats2018/MICCAI_BraTS_2018_Data_Training"
+datapath="../../../data"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
@@ -125,7 +125,6 @@ import keras as K
 
 K.backend.set_session(sess)
 
-
 def get_file_list(data_path=args.data_path):
     """
     Get list of the files from the BraTS raw data
@@ -169,11 +168,11 @@ model = unet_3d(input_shape=input_shape,
 start_time = time.time()
 
 # Save best model to hdf5 file
-directory = os.path.dirname(args.saved_model)
+saved_model_directory = os.path.dirname(args.saved_model)
 try:
-    os.stat(directory)
+    os.stat(saved_model_directory)
 except:
-    os.mkdir(directory)
+    os.mkdir(saved_model_directory)
 
 # if os.path.isfile(args.saved_model):
 #     model.load_weights(args.saved_model)
@@ -183,7 +182,7 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
                                          save_best_only=True)
 
 # TensorBoard
-tb_logs = K.callbacks.TensorBoard(log_dir="./tensorboard_logs")
+tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(saved_model_directory, "tensorboard_logs"))
 
 if args.horovod:
 
@@ -204,7 +203,10 @@ if args.horovod:
     # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
     hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1)]
 
-    callbacks_list = hvd_callbacks + [checkpoint, tb_logs]
+    callbacks_list = hvd_callbacks + [checkpoint]
+
+    if hvd.rank() == 0:
+        callbacks_list += [tb_logs]
 
 else:
     callbacks_list = [checkpoint, tb_logs]
@@ -228,8 +230,8 @@ else:
     print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
-imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
-msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
+#imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
+#msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
 
 training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": args.bz,
@@ -238,40 +240,31 @@ training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "augment": True,
                "shuffle": True}
 
-if args.horovod:
-    shardLen = len(trainList) // hvd.size()
-    startShard = hvd.rank()*shardLen
-    if (hvd.rank() + 1) == hvd.size():
-        stopShard = len(trainList)
-    else:
-        stopShard = (hvd.rank()+1)*shardLen
+training_generator = DataGenerator(trainList, **training_data_params)
 
-    shard = trainList[slice(startShard, stopShard)]
-    training_generator = DataGenerator(shard, **training_data_params)
-else:
-    training_generator = DataGenerator(trainList, **training_data_params)
-
-# validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
-#                "batch_size": 1,  # Use 1 so that we don't have partial batch
-#                "n_in_channels": 1,
-#                "n_out_channels": 1,
-#                "augment": False,
-#                "shuffle": False}
-# validation_generator = DataGenerator(testList, **validation_data_params)
+validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
+               "batch_size": 1,  # Use 1 so that we don't have partial batch
+               "n_in_channels": 1,
+               "n_out_channels": 1,
+               "augment": False,
+               "shuffle": False}
+validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 if args.horovod:
     if hvd.rank() == 0:  # Only do validation and callbacks on chief
         model.fit_generator(training_generator,
+                  steps_per_epoch=len(trainlist)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=1,
-                  #validation_data=validation_generator,
-                  validation_data=(imgs_test,msks_test),
+                  validation_data=validation_generator,
+                  #validation_data=(imgs_test,msks_test),
                   callbacks=callbacks_list)
     else:
         model.fit_generator(training_generator,
+                  steps_per_epoch=len(trainlist)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=0,
-                  #validation_data=validation_generator,
-                  validation_data=(imgs_test,msks_test),
+                  validation_data=validation_generator,
+                  #validation_data=(imgs_test,msks_test),
                   callbacks=hvd_callbacks # Just do the horovod callbacks
                   )
 else:
