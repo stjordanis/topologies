@@ -203,10 +203,10 @@ if args.horovod:
     # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
     hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1)]
 
-    callbacks_list = hvd_callbacks + [checkpoint]
-
     if hvd.rank() == 0:
-        callbacks_list += [tb_logs]
+        callbacks_list = hvd_callbacks + [checkpoint, tb_logs]
+    else:
+        callbacks_list = hvd_callbacks
 
 else:
     callbacks_list = [checkpoint, tb_logs]

@@ -32,7 +32,7 @@ parser.add_argument("--blocktime",
                     default=0,
                     help="Block time for CPU threads")
 parser.add_argument("--model",
-                    default="3d_unet_brat2018_dice82.hdf5",
+                    default="3d_unet_brats2018.hdf5",
                     help="Trained model to load")
 
 args = parser.parse_args()
@@ -90,7 +90,16 @@ display them on a 3D viewer.
 import nibabel as nib
 from tqdm import tqdm
 
+def dice_score(pred, truth):
+
+    numerator = 2*np.sum(pred*truth)+1.0
+    denominator = np.sum(pred)+np.sum(truth)
+
+    return numerator/denominator
+
 print("Saving Nifti predictions to {}".format(save_directory))
+mean_dice = 0.0
+
 for idx in tqdm(range(preds.shape[0])):
 
     img = nib.Nifti1Image(imgs[idx,:,:,:,0], np.eye(4))
@@ -101,3 +110,7 @@ for idx in tqdm(range(preds.shape[0])):
 
     pred = nib.Nifti1Image(preds[idx,:,:,:,0], np.eye(4))
     pred.to_filename(os.path.join(save_directory,"pred{}.nii.gz".format(idx)))
+
+    mean_dice += dice_score(preds[idx,:,:,:,0], msks[idx,:,:,:,0]) / preds.shape[0]
+
+print("Mean Dice score = {:.4f}".format(mean_dice))
