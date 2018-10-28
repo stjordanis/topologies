@@ -77,8 +77,8 @@ class DataGenerator(K.utils.Sequence):
         """
         # Generate indicies of the batch
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-	# Sort the indicies
-	indexes = np.sort(indexes)
+        # Sort the indicies
+        indexes = np.sort(indexes)
 
         # Find list of IDs
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
