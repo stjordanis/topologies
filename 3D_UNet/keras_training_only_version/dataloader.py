@@ -75,8 +75,10 @@ class DataGenerator(K.utils.Sequence):
         """
         Generate one batch of data
         """
-        # Generate indexes of the batch
+        # Generate indicies of the batch
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+	# Sort the indicies
+	indexes = np.sort(indexes)
 
         # Find list of IDs
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
@@ -88,7 +90,7 @@ class DataGenerator(K.utils.Sequence):
 
     def on_epoch_end(self):
         """
-        Updates indexes after each epoch
+        Updates indices after each epoch
         If shuffle is true, then it will shuffle the training set
         after every epoch.
         """
