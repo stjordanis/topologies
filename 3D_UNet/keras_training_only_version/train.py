@@ -41,7 +41,7 @@ parser.add_argument("--patch_dim",
                     help="Size of the 3D patch")
 parser.add_argument("--lr",
                     type=float,
-                    default=0.001,
+                    default=0.0001,
                     help="Learning rate")
 parser.add_argument("--train_test_split",
                     type=float,
@@ -198,15 +198,12 @@ if args.horovod:
     # TensorBoard or other metrics-based callbacks.
     hvd.callbacks.MetricAverageCallback(),
 
-    # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
-    # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
-    # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1)]
+    ]
 
     if hvd.rank() == 0:
-        callbacks_list = hvd_callbacks + [checkpoint, tb_logs]
+        callbacks_list = hvd_callbacks + [hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1), checkpoint, tb_logs]
     else:
-        callbacks_list = hvd_callbacks
+        callbacks_list = hvd_callbacks + [hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=0)]
 
 else:
     callbacks_list = [checkpoint, tb_logs]
@@ -233,12 +230,18 @@ else:
 #imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
 #msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
 
+if args.horovod:
+   seed = hvd.rank()  # Make sure each worker gets different random seed
+else:
+   seed = 816
+
 training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "batch_size": args.bz,
                "n_in_channels": 1,
                "n_out_channels": 1,
                "augment": True,
-               "shuffle": True}
+               "shuffle": True,
+               "seed": seed}
 
 training_generator = DataGenerator(trainList, **training_data_params)
 
@@ -247,7 +250,8 @@ validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
                "n_in_channels": 1,
                "n_out_channels": 1,
                "augment": False,
-               "shuffle": False}
+               "shuffle": False,
+	       "seed": 816}
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
@@ -257,6 +261,7 @@ if args.horovod:
                   steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=1,
                   validation_data=validation_generator,
+                  validation_steps=len(testList),
                   #validation_data=(imgs_test,msks_test),
                   callbacks=callbacks_list)
     else:
@@ -264,6 +269,7 @@ if args.horovod:
                   steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
                   epochs=args.epochs, verbose=0,
                   validation_data=validation_generator,
+                  validation_steps=len(testList),
                   #validation_data=(imgs_test,msks_test),
                   callbacks=hvd_callbacks # Just do the horovod callbacks
                   )

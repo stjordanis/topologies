@@ -49,18 +49,21 @@ class DataGenerator(K.utils.Sequence):
                  n_in_channels=1,  # Number of channels in image
                  n_out_channels=1,  # Number of channels in mask
                  shuffle=True,  # Shuffle list after each epoch
-                 augment=False):   # Augment images
+                 augment=False,   # Augment images
+		 seed = 816):     # Seed for random number generator
         """
         Initialization
         """
         self.dim = dim
         self.batch_size = batch_size
         self.list_IDs = list_IDs
-        self.indexes = np.arange(len(list_IDs))
         self.n_in_channels = n_in_channels
         self.n_out_channels = n_out_channels
         self.shuffle = shuffle
         self.augment = augment
+
+	np.random.seed(seed)
+	self.on_epoch_end()   # Generate the sequence
 
     def __len__(self):
         """
@@ -90,8 +93,10 @@ class DataGenerator(K.utils.Sequence):
         after every epoch.
         """
         self.indexes = np.arange(len(self.list_IDs))
-        if self.shuffle == True:
+        if self.shuffle:
             np.random.shuffle(self.indexes)
+
+	print(self.indexes)
 
     def crop_img(self, img, msk, randomize=True):
         """
