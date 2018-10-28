@@ -82,39 +82,39 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                   kernel_initializer="he_uniform")
 
     conv1 = K.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
-    conv1 = K.layers.BatchNormalization()(conv1)
+#    conv1 = K.layers.BatchNormalization()(conv1)
     conv1 = K.layers.Activation("relu")(conv1)
     conv1 = K.layers.Conv3D(name="conv1b", filters=64, **params)(conv1)
-    conv1 = K.layers.BatchNormalization()(conv1)
+#    conv1 = K.layers.BatchNormalization()(conv1)
     conv1 = K.layers.Activation("relu")(conv1)
     pool1 = K.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv1)
 
     conv2 = K.layers.Conv3D(name="conv2a", filters=64, **params)(pool1)
-    conv2 = K.layers.BatchNormalization()(conv2)
+#    conv2 = K.layers.BatchNormalization()(conv2)
     conv2 = K.layers.Activation("relu")(conv2)
     conv2 = K.layers.Conv3D(name="conv2b", filters=128, **params)(conv2)
-    conv2 = K.layers.BatchNormalization()(conv2)
+#    conv2 = K.layers.BatchNormalization()(conv2)
     conv2 = K.layers.Activation("relu")(conv2)
     pool2 = K.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv2)
 
     conv3 = K.layers.Conv3D(name="conv3a", filters=128, **params)(pool2)
-    conv3 = K.layers.BatchNormalization()(conv3)
+#    conv3 = K.layers.BatchNormalization()(conv3)
     conv3 = K.layers.Activation("relu")(conv3)
     # Trying dropout layers earlier on, as indicated in the paper
     conv3 = K.layers.SpatialDropout3D(dropout)(conv3)
     conv3 = K.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
-    conv3 = K.layers.BatchNormalization()(conv3)
+#    conv3 = K.layers.BatchNormalization()(conv3)
     conv3 = K.layers.Activation("relu")(conv3)
     pool3 = K.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv3)
 
     conv4 = K.layers.Conv3D(name="conv4a", filters=256, **params)(pool3)
-    conv4 = K.layers.BatchNormalization()(conv4)
+#    conv4 = K.layers.BatchNormalization()(conv4)
     conv4 = K.layers.Activation("relu")(conv4)
     # Trying dropout layers earlier on, as indicated in the paper
     conv4 = K.layers.SpatialDropout3D(dropout)(conv4)
 
     conv4 = K.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
-    conv4 = K.layers.BatchNormalization()(conv4)
+#    conv4 = K.layers.BatchNormalization()(conv4)
     conv4 = K.layers.Activation("relu")(conv4)
 
     if use_upsampling:
@@ -129,10 +129,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
 
     conv5 = K.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
-    conv5 = K.layers.BatchNormalization()(conv5)
+#    conv5 = K.layers.BatchNormalization()(conv5)
     conv5 = K.layers.Activation("relu")(conv5)
     conv5 = K.layers.Conv3D(name="conv5b", filters=256, **params)(conv5)
-    conv5 = K.layers.BatchNormalization()(conv5)
+#    conv5 = K.layers.BatchNormalization()(conv5)
     conv5 = K.layers.Activation("relu")(conv5)
 
     if use_upsampling:
@@ -147,10 +147,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
 
     conv6 = K.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
-    conv6 = K.layers.BatchNormalization()(conv6)
+#    conv6 = K.layers.BatchNormalization()(conv6)
     conv6 = K.layers.Activation("relu")(conv6)
     conv6 = K.layers.Conv3D(name="conv6b", filters=128, **params)(conv6)
-    conv6 = K.layers.BatchNormalization()(conv6)
+#    conv6 = K.layers.BatchNormalization()(conv6)
     conv6 = K.layers.Activation("relu")(conv6)
 
     if use_upsampling:
@@ -165,10 +165,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
 
     conv7 = K.layers.Conv3D(name="conv7a", filters=64, **params)(up6)
-    conv7 = K.layers.BatchNormalization()(conv7)
+#    conv7 = K.layers.BatchNormalization()(conv7)
     conv7 = K.layers.Activation("relu")(conv7)
     conv7 = K.layers.Conv3D(name="conv7b", filters=64, **params)(conv7)
-    conv7 = K.layers.BatchNormalization()(conv7)
+#    conv7 = K.layers.BatchNormalization()(conv7)
     conv7 = K.layers.Activation("relu")(conv7)
     pred = K.layers.Conv3D(name="Prediction_Mask", filters=n_cl_out,
                            kernel_size=(1, 1, 1),

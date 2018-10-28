@@ -76,9 +76,8 @@ class DataGenerator(K.utils.Sequence):
         Generate one batch of data
         """
         # Generate indicies of the batch
-        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-        # Sort the indicies
-        indexes = np.sort(indexes)
+        indexes = np.sort(
+            self.indexes[index*self.batch_size:(index+1)*self.batch_size])
 
         # Find list of IDs
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
@@ -97,8 +96,6 @@ class DataGenerator(K.utils.Sequence):
         self.indexes = np.arange(len(self.list_IDs))
         if self.shuffle:
             np.random.shuffle(self.indexes)
-
-        print(self.indexes)
 
     def crop_img(self, img, msk, randomize=True):
         """
