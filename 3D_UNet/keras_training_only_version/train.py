@@ -15,6 +15,7 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
+import keras as K
 import numpy as np
 
 import random
@@ -71,7 +72,7 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
-datapath="../../../data"
+datapath = "../../../data"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
@@ -94,7 +95,7 @@ if args.horovod:
     import horovod.keras as hvd
     hvd.init()
 
-    if hvd.rank()==0:
+    if hvd.rank() == 0:
         os.system("lscpu")
         print("Started script on {}".format(datetime.datetime.now()))
 
@@ -121,9 +122,9 @@ config = tf.ConfigProto(
 
 sess = tf.Session(config=config)
 
-import keras as K
 
 K.backend.set_session(sess)
+
 
 def get_file_list(data_path=args.data_path):
     """
@@ -147,15 +148,16 @@ def get_file_list(data_path=args.data_path):
 
     return trainList, testList
 
+
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
 
 if args.horovod:
-    if (hvd.rank()==0):
-        print_summary=args.print_model
+    if (hvd.rank() == 0):
+        print_summary = args.print_model
     else:
-        print_summary=args.print_model
+        print_summary = args.print_model
 else:
-    print_summary=args.print_model
+    print_summary = args.print_model
 
 model = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
@@ -182,28 +184,33 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
                                          save_best_only=True)
 
 # TensorBoard
-tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(saved_model_directory, "tensorboard_logs"))
+tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
+    saved_model_directory, "tensorboard_logs"))
 
 if args.horovod:
 
     hvd_callbacks = [
-    # Horovod: broadcast initial variable states from rank 0 to all other processes.
-    # This is necessary to ensure consistent initialization of all workers when
-    # training is started with random weights or restored from a checkpoint.
-    hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+        # Horovod: broadcast initial variable states from rank 0 to all other processes.
+        # This is necessary to ensure consistent initialization of all workers when
+        # training is started with random weights or restored from a checkpoint.
+        hvd.callbacks.BroadcastGlobalVariablesCallback(0),
 
-    # Horovod: average metrics among workers at the end of every epoch.
-    #
-    # Note: This callback must be in the list before the ReduceLROnPlateau,
-    # TensorBoard or other metrics-based callbacks.
-    hvd.callbacks.MetricAverageCallback(),
+        # Horovod: average metrics among workers at the end of every epoch.
+        #
+        # Note: This callback must be in the list before the ReduceLROnPlateau,
+        # TensorBoard or other metrics-based callbacks.
+        hvd.callbacks.MetricAverageCallback(),
 
     ]
 
     if hvd.rank() == 0:
-        callbacks_list = hvd_callbacks + [hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=1), checkpoint, tb_logs]
+        callbacks_list = hvd_callbacks + \
+            [hvd.callbacks.LearningRateWarmupCallback(
+                warmup_epochs=5, verbose=1), checkpoint, tb_logs]
     else:
-        callbacks_list = hvd_callbacks + [hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=0)]
+        callbacks_list = hvd_callbacks + \
+            [hvd.callbacks.LearningRateWarmupCallback(
+                warmup_epochs=5, verbose=0)]
 
 else:
     callbacks_list = [checkpoint, tb_logs]
@@ -219,7 +226,7 @@ with open("testlist.txt", "w") as f:
         f.write("{}\n".format(item))
 
 if args.horovod:
-    if hvd.rank()==0:
+    if hvd.rank() == 0:
         print("Number of training MRIs = {}".format(len(trainList)))
         print("Number of test MRIs = {}".format(len(testList)))
 else:
@@ -231,59 +238,62 @@ else:
 #msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
 
 if args.horovod:
-   seed = hvd.rank()  # Make sure each worker gets different random seed
+    seed = hvd.rank()  # Make sure each worker gets different random seed
 else:
-   seed = 816
+    seed = 816
 
-training_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
-               "batch_size": args.bz,
-               "n_in_channels": 1,
-               "n_out_channels": 1,
-               "augment": True,
-               "shuffle": True,
-               "seed": seed}
+training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+                        "batch_size": args.bz,
+                        "n_in_channels": 1,
+                        "n_out_channels": 1,
+                        "augment": True,
+                        "shuffle": True,
+                        "seed": seed}
 
 training_generator = DataGenerator(trainList, **training_data_params)
 
-validation_data_params = {"dim": (args.patch_dim,args.patch_dim,args.patch_dim),
-               "batch_size": 1,  # Use 1 so that we don't have partial batch
-               "n_in_channels": 1,
-               "n_out_channels": 1,
-               "augment": False,
-               "shuffle": False,
-	       "seed": 816}
+validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+                          "batch_size": 1,  # Use 1 so that we don't have partial batch
+                          "n_in_channels": 1,
+                          "n_out_channels": 1,
+                          "augment": False,
+                          "shuffle": False,
+                          "seed": 816}
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 if args.horovod:
     if hvd.rank() == 0:  # Only do validation and callbacks on chief
         model.fit_generator(training_generator,
-                  steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
-                  epochs=args.epochs, verbose=1,
-                  validation_data=validation_generator,
-                  validation_steps=len(testList),
-                  #validation_data=(imgs_test,msks_test),
-                  callbacks=callbacks_list)
+                            steps_per_epoch=len(
+                                trainList)//(args.bz*hvd.size()),
+                            epochs=args.epochs, verbose=1,
+                            validation_data=validation_generator,
+                            validation_steps=len(testList),
+                            # validation_data=(imgs_test,msks_test),
+                            callbacks=callbacks_list)
     else:
         model.fit_generator(training_generator,
-                  steps_per_epoch=len(trainList)//(args.bz*hvd.size()),
-                  epochs=args.epochs, verbose=0,
-                  validation_data=validation_generator,
-                  validation_steps=len(testList),
-                  #validation_data=(imgs_test,msks_test),
-                  callbacks=hvd_callbacks # Just do the horovod callbacks
-                  )
+                            steps_per_epoch=len(
+                                trainList)//(args.bz*hvd.size()),
+                            epochs=args.epochs, verbose=0,
+                            validation_data=validation_generator,
+                            validation_steps=len(testList),
+                            # validation_data=(imgs_test,msks_test),
+                            callbacks=hvd_callbacks  # Just do the horovod callbacks
+                            )
 else:
     model.fit_generator(training_generator,
-              epochs=args.epochs, verbose=1,
-              #validation_data=validation_generator,
-              validation_data=(imgs_test,msks_test),
-              callbacks=callbacks_list)
+                        epochs=args.epochs, verbose=1,
+                        # validation_data=validation_generator,
+                        validation_data=(imgs_test, msks_test),
+                        callbacks=callbacks_list)
 
 if args.horovod:
-    if hvd.rank()==0:
+    if hvd.rank() == 0:
         stop_time = time.time()
-        print("\n\nTotal time = {:,.3f} seconds".format(stop_time - start_time))
+        print("\n\nTotal time = {:,.3f} seconds".format(
+            stop_time - start_time))
         print("Stopped script on {}".format(datetime.datetime.now()))
 else:
     stop_time = time.time()

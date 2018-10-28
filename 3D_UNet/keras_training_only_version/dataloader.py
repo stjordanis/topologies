@@ -50,7 +50,7 @@ class DataGenerator(K.utils.Sequence):
                  n_out_channels=1,  # Number of channels in mask
                  shuffle=True,  # Shuffle list after each epoch
                  augment=False,   # Augment images
-		 seed = 816):     # Seed for random number generator
+                 seed=816):     # Seed for random number generator
         """
         Initialization
         """
@@ -62,8 +62,8 @@ class DataGenerator(K.utils.Sequence):
         self.shuffle = shuffle
         self.augment = augment
 
-	np.random.seed(seed)
-	self.on_epoch_end()   # Generate the sequence
+        np.random.seed(seed)
+        self.on_epoch_end()   # Generate the sequence
 
     def __len__(self):
         """
@@ -96,7 +96,7 @@ class DataGenerator(K.utils.Sequence):
         if self.shuffle:
             np.random.shuffle(self.indexes)
 
-	print(self.indexes)
+        print(self.indexes)
 
     def crop_img(self, img, msk, randomize=True):
         """
@@ -188,8 +188,8 @@ class DataGenerator(K.utils.Sequence):
             if self.augment and (np.random.rand() > 0.5):
                 img, msk = self.augment_data(img, msk)
 
-            imgs[idx,] = np.expand_dims(img, -1)
-            msks[idx,] = np.expand_dims(msk, -1)
+            imgs[idx, ] = np.expand_dims(img, -1)
+            msks[idx, ] = np.expand_dims(msk, -1)
 
             idx += 1
 
