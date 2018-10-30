@@ -189,7 +189,12 @@ tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
 
 if args.horovod:
 
-    hvd_callbacks = [
+    if hvd.rank() == 0:  # Only do validation and callbacks on chief
+        verbose = 1
+    else:
+        verbose = 0
+
+    callbacks = [
         # Horovod: broadcast initial variable states from rank 0 to all other processes.
         # This is necessary to ensure consistent initialization of all workers when
         # training is started with random weights or restored from a checkpoint.
@@ -199,21 +204,25 @@ if args.horovod:
         #
         # Note: This callback must be in the list before the ReduceLROnPlateau,
         # TensorBoard or other metrics-based callbacks.
-        hvd.callbacks.MetricAverageCallback()
+        hvd.callbacks.MetricAverageCallback(),
 
+        # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
+        # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
+        # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
+        hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=verbose),
+
+        # Reduce the learning rate if training plateaus.
+        K.callbacks.ReduceLROnPlateau(patience=5, verbose=verbose)
     ]
 
     if hvd.rank() == 0:
-        callbacks_list = hvd_callbacks + \
-            [hvd.callbacks.LearningRateWarmupCallback(
-                warmup_epochs=5, verbose=1), checkpoint, tb_logs]
-    else:
-        callbacks_list = hvd_callbacks + \
-            [hvd.callbacks.LearningRateWarmupCallback(
-                warmup_epochs=5, verbose=0)]
+        callbacks.append(checkpoint)
+        callbacks.append(tb_logs)
 
 else:
-    callbacks_list = [checkpoint, tb_logs]
+    callbacks = [K.callbacks.ReduceLROnPlateau(patience=5, verbose=1),
+                 checkpoint, tb_logs]
+
 
 # Separate file lists into train and test sets
 trainList, testList = get_file_list()
@@ -234,8 +243,8 @@ else:
     print("Number of test MRIs = {}".format(len(testList)))
 
 # Run the script  "load_brats_images.py" to generate these Numpy data files
-#imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
-#msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
+imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
+msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
 
 if args.horovod:
     seed = hvd.rank()  # Make sure each worker gets different random seed
@@ -264,30 +273,25 @@ validation_generator = DataGenerator(testList, **validation_data_params)
 # Fit the model
 if args.horovod:
     if hvd.rank() == 0:  # Only do validation and callbacks on chief
-        model.fit_generator(training_generator,
-                            steps_per_epoch=len(
-                                trainList)//(args.bz*hvd.size()),
-                            epochs=args.epochs, verbose=1,
-                            validation_data=validation_generator,
-                            validation_steps=len(testList),
-                            # validation_data=(imgs_test,msks_test),
-                            callbacks=callbacks_list)
+        verbose = 1
     else:
-        model.fit_generator(training_generator,
-                            steps_per_epoch=len(
-                                trainList)//(args.bz*hvd.size()),
-                            epochs=args.epochs, verbose=0,
-                            validation_data=validation_generator,
-                            validation_steps=len(testList),
-                            # validation_data=(imgs_test,msks_test),
-                            callbacks=hvd_callbacks  # Just do the horovod callbacks
-                            )
+        verbose = 0
+
+    model.fit_generator(training_generator,
+                        steps_per_epoch=len(
+                            trainList)//(args.bz*hvd.size()),
+                        epochs=args.epochs, verbose=verbose,
+                        #validation_data=validation_generator,
+                        #validation_steps=len(testList),
+                        validation_data=(imgs_test,msks_test),
+                        callbacks=callbacks)
+
 else:
     model.fit_generator(training_generator,
                         epochs=args.epochs, verbose=1,
                         # validation_data=validation_generator,
                         validation_data=(imgs_test, msks_test),
-                        callbacks=callbacks_list)
+                        callbacks=callbacks)
 
 if args.horovod:
     if hvd.rank() == 0:
