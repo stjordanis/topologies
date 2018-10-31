@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(
     description="Train 3D U-Net model", add_help=True)
 parser.add_argument("--bz",
                     type=int,
-                    default=1,
+                    default=4,
                     help="Batch size")
 parser.add_argument("--patch_dim",
                     type=int,

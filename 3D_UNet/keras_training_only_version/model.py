@@ -69,8 +69,7 @@ else:
     data_format = "channels_first"
 
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
-                 n_cl_out=1, dropout=0.2, print_summary=False,
-                 using_horovod=False):
+                 n_cl_out=1, dropout=0.2, print_summary=False):
     """
     3D U-Net
     """
@@ -180,20 +179,9 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     if print_summary:
         model.summary()
 
-    if using_horovod:
-        import horovod.keras as hvd
-        opt = K.optimizers.Adam(learning_rate*hvd.size())
-        opt = hvd.DistributedOptimizer(opt)
-    else:
-        opt = K.optimizers.Adam(learning_rate)
+    opt = K.optimizers.Adam(learning_rate)
 
-    model.compile(optimizer=opt,
-                  # loss=[combined_dice_ce_loss],
-                  loss=[dice_coef_loss],
-                  metrics=[dice_coef, "accuracy",
-                           sensitivity, specificity])
-
-    return model
+    return model, opt
 
 
 def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
