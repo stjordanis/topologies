@@ -64,6 +64,10 @@ parser.add_argument("--blocktime",
                     type=int,
                     default=1,
                     help="Block time for CPU threads")
+parser.add_argument("--number_input_channels",
+                    type=int,
+                    default=4,
+                    help="Number of input channels")
 parser.add_argument("--print_model",
                     action="store_true",
                     default=False,
@@ -134,7 +138,7 @@ def get_file_list(data_path=args.data_path):
     return trainList, testList
 
 
-input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
+input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, args.number_input_channels]
 
 
 if (hvd.rank() == 0):
@@ -147,16 +151,17 @@ else:
 
 model, opt = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
+                n_cl_in=args.number_input_channels,
                 learning_rate=args.lr*hvd.size(),
                 n_cl_out=1,  # single channel (greyscale)
-                dropout=0.5,
+                dropout=0.2,
                 print_summary=print_summary)
 
 opt = hvd.DistributedOptimizer(opt)
 
 model.compile(optimizer=opt,
-              # loss=[combined_dice_ce_loss],
-              loss=[dice_coef_loss],
+              loss=[combined_dice_ce_loss],
+              #loss=[dice_coef_loss],
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 
@@ -195,10 +200,10 @@ callbacks = [
     # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
     # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
     # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
-    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=5, verbose=verbose),
+    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
 
     # Reduce the learning rate if training plateaus.
-    K.callbacks.ReduceLROnPlateau(patience=5, verbose=verbose)
+    K.callbacks.ReduceLROnPlateau(patience=2, verbose=verbose)
 ]
 
 if hvd.rank() == 0:
@@ -229,7 +234,7 @@ seed = hvd.rank()  # Make sure each worker gets different random seed
 
 training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
                         "batch_size": args.bz,
-                        "n_in_channels": 1,
+                        "n_in_channels": args.number_input_channels,
                         "n_out_channels": 1,
                         "augment": True,
                         "shuffle": True,
@@ -239,7 +244,7 @@ training_generator = DataGenerator(trainList, **training_data_params)
 
 validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
                           "batch_size": args.bz,
-                          "n_in_channels": 1,
+                          "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,
                           "augment": False,
                           "shuffle": False,
@@ -247,13 +252,11 @@ validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
+steps_per_epoch = max(5, len(trainList)//(args.bz*hvd.size()))
 model.fit_generator(training_generator,
-                    steps_per_epoch=len(
-                        trainList)//(args.bz*hvd.size()),
+                    steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
-                    validation_steps=3*len(
-                        testList)//(args.bz*hvd.size()),
                     #validation_data=(imgs_test,msks_test),
                     callbacks=callbacks)
 
