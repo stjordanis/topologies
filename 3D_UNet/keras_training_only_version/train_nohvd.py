@@ -64,6 +64,11 @@ parser.add_argument("--blocktime",
                     type=int,
                     default=1,
                     help="Block time for CPU threads")
+parser.add_argument("--number_input_channels",
+                    type=int,
+                    default=4,
+                    help="Number of input channels")
+
 parser.add_argument("--print_model",
                     action="store_true",
                     default=False,
@@ -72,7 +77,7 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
-datapath = "../../../data"
+datapath = "../../../data/Brats2018/"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
@@ -130,23 +135,23 @@ def get_file_list(data_path=args.data_path):
     return trainList, testList
 
 
-input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, 1]
+input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, args.number_input_channels]
 
 
 print_summary = args.print_model
 verbose = 1
 
-
 model, opt = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
                 learning_rate=args.lr,
+                n_cl_in=args.number_input_channels,
                 n_cl_out=1,  # single channel (greyscale)
-                dropout=0.5,
+                dropout=0.2,
                 print_summary=print_summary)
 
 model.compile(optimizer=opt,
-              # loss=[combined_dice_ce_loss],
-              loss=[dice_coef_loss],
+              loss=[combined_dice_ce_loss],
+              #loss=[dice_coef_loss],
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 
@@ -189,14 +194,10 @@ with open("testlist.txt", "w") as f:
 print("Number of training MRIs = {}".format(len(trainList)))
 print("Number of test MRIs = {}".format(len(testList)))
 
-# Run the script  "load_brats_images.py" to generate these Numpy data files
-imgs_test = np.load(os.path.join(sys.path[0],"imgs_test_3d.npy"))
-msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
-
 seed = 816
 training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
                         "batch_size": args.bz,
-                        "n_in_channels": 1,
+                        "n_in_channels": args.number_input_channels,
                         "n_out_channels": 1,
                         "augment": True,
                         "shuffle": True,
@@ -204,20 +205,19 @@ training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
 
 training_generator = DataGenerator(trainList, **training_data_params)
 
-# validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
-#                           "batch_size": args.bz,
-#                           "n_in_channels": 1,
-#                           "n_out_channels": 1,
-#                           "augment": False,
-#                           "shuffle": False,
-#                           "seed": 816}
-# validation_generator = DataGenerator(testList, **validation_data_params)
+validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+                          "batch_size": args.bz,
+                          "n_in_channels": args.number_input_channels,
+                          "n_out_channels": 1,
+                          "augment": False,
+                          "shuffle": False,
+                          "seed": 816}
+validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 model.fit_generator(training_generator,
                     epochs=args.epochs, verbose=verbose,
-                    # validation_data=validation_generator,
-                    validation_data=(imgs_test,msks_test),
+                    validation_data=validation_generator,
                     callbacks=callbacks)
 
 

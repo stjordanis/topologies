@@ -114,7 +114,7 @@ class DataGenerator(K.utils.Sequence):
 
             start = (imgLen-cropLen)//2
 
-            ratio_crop = 0.10  # Crop up this this % of pixels for offset
+            ratio_crop = 0.20  # Crop up this this % of pixels for offset
             # Number of pixels to offset crop in this dimension
             offset = int(np.floor(start*ratio_crop))
 
@@ -124,6 +124,8 @@ class DataGenerator(K.utils.Sequence):
                     start = (imgLen-cropLen)//2
 
             slices.append(slice(start, start+cropLen))
+
+        slices.append(slice(0,self.n_in_channels)) # No slicing along channels
 
         return img[tuple(slices)], msk[tuple(slices)]
 
@@ -169,15 +171,41 @@ class DataGenerator(K.utils.Sequence):
         idx = 0
         for file in list_IDs_temp:
 
+            # T2-FLAIR channel
             imgFile = os.path.join(
                 file, os.path.basename(file) + "_flair.nii.gz")
+
+            img_flair = np.array(nib.load(imgFile).dataobj)
+            img_dim = np.shape(img_flair)
+
+            img = np.zeros((img_dim[0], img_dim[1], img_dim[2], self.n_in_channels))
+
+            img[...,0] = img_flair
+
+            if self.n_in_channels > 1:
+
+                # Adding T1 constrast enhanced MRI
+                imgFile = os.path.join(
+                    file, os.path.basename(file) + "_t1ce.nii.gz")
+                img[...,1] = np.array(nib.load(imgFile).dataobj)
+
+                # Adding T1 MRI
+                imgFile = os.path.join(
+                    file, os.path.basename(file) + "_t1.nii.gz")
+                img[...,2] = np.array(nib.load(imgFile).dataobj)
+
+                # Adding T2 MRI
+                imgFile = os.path.join(
+                    file, os.path.basename(file) + "_t2.nii.gz")
+                img[...,3] = np.array(nib.load(imgFile).dataobj)
+
+
+            # Get mask data
             mskFile = os.path.join(
                 file, os.path.basename(file) + "_seg.nii.gz")
-
-            img = np.array(nib.load(imgFile).dataobj)
-
             msk = np.array(nib.load(mskFile).dataobj)
             msk[msk > 0] = 1.0   # Combine masks to get whole tumor
+            msk = np.expand_dims(msk, -1)
 
             # Take a crop of the patch_dim size
             img, msk = self.crop_img(img, msk, self.augment)
@@ -188,8 +216,8 @@ class DataGenerator(K.utils.Sequence):
             if self.augment and (np.random.rand() > 0.5):
                 img, msk = self.augment_data(img, msk)
 
-            imgs[idx, ] = np.expand_dims(img, -1)
-            msks[idx, ] = np.expand_dims(msk, -1)
+            imgs[idx, ] = img
+            msks[idx, ] = msk
 
             idx += 1
 

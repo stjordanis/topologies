@@ -52,12 +52,12 @@ def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
 
     return dice_loss
 
-def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
+def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1., weight=.7):
     """
     Combined Dice and Binary Cross Entropy Loss
     """
-    return dice_coef_loss(target, prediction, axis, smooth) + \
-           K.losses.binary_crossentropy(target, prediction)
+    return weight*dice_coef_loss(target, prediction, axis, smooth) + \
+           (1-weight)*K.losses.binary_crossentropy(target, prediction)
 
 CHANNEL_LAST = True
 if CHANNEL_LAST:
@@ -69,16 +69,17 @@ else:
     data_format = "channels_first"
 
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
-                 n_cl_out=1, dropout=0.2, print_summary=False):
+                 n_cl_in=1, n_cl_out=1, dropout=0.2, print_summary=False):
     """
     3D U-Net
     """
 
-    inputs = K.layers.Input(shape=[None, None, None, 1], name="Input_Image")
+    inputs = K.layers.Input(shape=input_shape, name="Input_Image")
 
     params = dict(kernel_size=(3, 3, 3), activation=None,
                   padding="same", data_format=data_format,
-                  kernel_initializer="he_uniform")
+                  kernel_initializer="he_uniform",
+                  kernel_regularizer=K.regularizers.l2(1e-5))
 
     conv1 = K.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
     conv1 = K.layers.BatchNormalization()(conv1)
@@ -123,6 +124,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
+                                      kernel_regularizer=K.regularizers.l2(1e-5),
                                       padding="same")(conv4)
 
     up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
@@ -141,6 +143,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       filters=256, data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
+                                      kernel_regularizer=K.regularizers.l2(1e-5),
                                       padding="same")(conv5)
 
     up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
@@ -159,6 +162,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       filters=128, data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
+                                      kernel_regularizer=K.regularizers.l2(1e-5),
                                       padding="same")(conv6)
 
     up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
@@ -172,6 +176,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     pred = K.layers.Conv3D(name="Prediction_Mask", filters=n_cl_out,
                            kernel_size=(1, 1, 1),
                            data_format=data_format,
+                           kernel_regularizer=K.regularizers.l2(1e-5),
                            activation="sigmoid")(conv7)
 
     model = K.models.Model(inputs=[inputs], outputs=[pred])
