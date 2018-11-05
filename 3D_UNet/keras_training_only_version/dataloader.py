@@ -134,8 +134,8 @@ class DataGenerator(K.utils.Sequence):
         """
 
         if np.random.rand() > 0.5:
-            # Random 0,1,2 (axes to flip)
-            ax = np.random.choice(np.arange(len(self.dim)))
+            # Random 0,1 (axes to flip)
+            ax = np.random.choice(np.arange(len(self.dim)-1))
             img = np.flip(img, ax)
             msk = np.flip(msk, ax)
 
