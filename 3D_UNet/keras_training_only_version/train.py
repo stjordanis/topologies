@@ -183,7 +183,7 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
 
 # TensorBoard
 tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
-    saved_model_directory, "tensorboard_logs"))
+    saved_model_directory, "tensorboard_logs"), update_freq="batch")
 
 callbacks = [
     # Horovod: broadcast initial variable states from rank 0 to all other processes.
