@@ -154,7 +154,25 @@ class DataGenerator(K.utils.Sequence):
         Normalize the image so that the mean value for each image
         is 0 and the standard deviation is 1.
         """
-        return (img - np.mean(img)) / np.std(img)
+        for channel in range(img.shape[-1]):
+
+            img_temp = img[...,channel]
+            img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
+
+            # Clip between -5 and 5
+            # Based on  Isensee et al., 2017
+            # https://arxiv.org/pdf/1802.10508v1.pdf
+            img_temp[img_temp > 5] = 5
+            img_temp[img_temp < -5] = -5
+
+            # Translate positive and normalize between 0 and 1
+            img_temp = img_temp - np.min(img_temp)
+            img_temp /= np.max(img_temp)
+
+            # Clip
+            img[...,channel] = img_temp
+
+        return img
 
     def __data_generation(self, list_IDs_temp):
         """
