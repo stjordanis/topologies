@@ -141,8 +141,9 @@ class DataGenerator(K.utils.Sequence):
 
         elif np.random.rand() > 0.5:
             rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
-            img = np.rot90(img, rot)
-            msk = np.rot90(msk, rot)
+            axis = np.random.choice([0, 1]) # Axis to rotate through
+            img = np.rot90(img, rot, axes=(axis,2))
+            msk = np.rot90(msk, rot, axes=(axis,2))
 
         return img, msk
 
