@@ -111,9 +111,7 @@ config = tf.ConfigProto(
 
 sess = tf.Session(config=config)
 
-
 K.backend.set_session(sess)
-
 
 def get_file_list(data_path=args.data_path):
     """
