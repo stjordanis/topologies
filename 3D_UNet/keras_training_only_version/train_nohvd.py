@@ -177,7 +177,7 @@ tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
 
 # Keep reducing learning rate if we get to plateau
 reduce_lr = K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
-                              patience=2, min_lr=0.00001)
+                              patience=5, min_lr=0.0001)
 
 callbacks = [checkpoint, tb_logs, reduce_lr]
 
