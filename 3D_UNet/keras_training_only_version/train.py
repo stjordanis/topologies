@@ -136,7 +136,8 @@ def get_file_list(data_path=args.data_path):
     return trainList, testList
 
 
-input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, args.number_input_channels]
+input_shape = [args.patch_dim, args.patch_dim, args.patch_dim,
+               args.number_input_channels]
 
 
 if (hvd.rank() == 0):
@@ -184,9 +185,12 @@ tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
     saved_model_directory, "tensorboard_logs"), update_freq="batch")
 
 callbacks = [
-    # Horovod: broadcast initial variable states from rank 0 to all other processes.
-    # This is necessary to ensure consistent initialization of all workers when
-    # training is started with random weights or restored from a checkpoint.
+    # Horovod: broadcast initial variable states from
+    # rank 0 to all other processes.
+    # This is necessary to ensure consistent initialization
+    # of all workers when
+    # training is started with random weights or
+    # restored from a checkpoint.
     hvd.callbacks.BroadcastGlobalVariablesCallback(0),
 
     # Horovod: average metrics among workers at the end of every epoch.
@@ -195,9 +199,12 @@ callbacks = [
     # TensorBoard or other metrics-based callbacks.
     hvd.callbacks.MetricAverageCallback(),
 
-    # Horovod: using `lr = 1.0 * hvd.size()` from the very beginning leads to worse final
-    # accuracy. Scale the learning rate `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
-    # the first five epochs. See https://arxiv.org/abs/1706.02677 for details.
+    # Horovod: using `lr = 1.0 * hvd.size()` from the very
+    # beginning leads to worse final
+    # accuracy. Scale the learning rate
+    # `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
+    # the first five epochs. See https://arxiv.org/abs/1706.02677
+    # for details.
     hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
 
     # Reduce the learning rate if training plateaus.
@@ -255,7 +262,6 @@ model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
-                    #validation_data=(imgs_test,msks_test),
                     callbacks=callbacks)
 
 if hvd.rank() == 0:
