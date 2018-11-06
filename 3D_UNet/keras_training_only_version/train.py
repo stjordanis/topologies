@@ -42,7 +42,7 @@ parser.add_argument("--patch_dim",
                     help="Size of the 3D patch")
 parser.add_argument("--lr",
                     type=float,
-                    default=0.0001,
+                    default=0.01,
                     help="Learning rate")
 parser.add_argument("--train_test_split",
                     type=float,
