@@ -184,6 +184,14 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
 tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
     saved_model_directory, "tensorboard_logs"), update_freq="batch")
 
+# NOTE:
+# Horovod talks about having callbacks for rank 0 and callbacks
+# for other ranks. For example, they recommend only doing checkpoints
+# and tensorboard on rank 0. However, if there is a signficant time
+# to execute tensorboard update or checkpoint update, then
+# this might cause an issue with rank 0 not returning in time.
+# My thought is that all ranks need to have essentially the same
+# time taken for each rank.
 callbacks = [
     # Horovod: broadcast initial variable states from
     # rank 0 to all other processes.
@@ -211,10 +219,10 @@ callbacks = [
     K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
                                   verbose=verbose,
                                   patience=5, min_lr=0.0001),
-    tb_logs
+    tb_logs  # we need this here otherwise tensorboard delays rank 0
 ]
 
-if hvd.rank() == 0:
+if (hvd.rank()//2) == 0:
     callbacks.append(checkpoint)
     #callbacks.append(tb_logs)
 
@@ -260,13 +268,13 @@ validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
-steps_per_epoch = max(5, len(trainList)//(args.bz*hvd.size()))
-validation_steps = max(3, 3*len(testList)//args.bz)
+steps_per_epoch = max(3, len(trainList)//(args.bz*hvd.size()))
+validation_steps = 3*len(testList)
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
-#		    validation_steps=validation_steps,
+		            validation_steps=validation_steps,
                     callbacks=callbacks)
 
 if hvd.rank() == 0:
