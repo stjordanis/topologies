@@ -50,7 +50,7 @@ parser.add_argument("--train_test_split",
                     help="Train test split (0-1)")
 parser.add_argument("--epochs",
                     type=int,
-                    default=30,
+                    default=50,
                     help="Number of epochs")
 parser.add_argument("--intraop_threads",
                     type=int,
@@ -150,8 +150,8 @@ model, opt = unet_3d(input_shape=input_shape,
                 print_summary=print_summary)
 
 model.compile(optimizer=opt,
-              loss=[combined_dice_ce_loss],
-              #loss=[dice_coef_loss],
+              #loss=[combined_dice_ce_loss],
+              loss=[dice_coef_loss],
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 

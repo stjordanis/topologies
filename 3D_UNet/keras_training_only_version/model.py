@@ -22,6 +22,7 @@ import tensorflow as tf
 
 import keras as K
 
+
 def dice_coef(y_true, y_pred, axis=(1, 2, 3), smooth=1.):
     """
     Sorenson (Soft) Dice
@@ -35,6 +36,7 @@ def dice_coef(y_true, y_pred, axis=(1, 2, 3), smooth=1.):
     coef = numerator / denominator
 
     return tf.reduce_mean(coef)
+
 
 def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
@@ -52,12 +54,14 @@ def dice_coef_loss(target, prediction, axis=(1, 2, 3), smooth=1.):
 
     return dice_loss
 
+
 def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1., weight=.7):
     """
     Combined Dice and Binary Cross Entropy Loss
     """
     return weight*dice_coef_loss(target, prediction, axis, smooth) + \
-           (1-weight)*K.losses.binary_crossentropy(target, prediction)
+        (1-weight)*K.losses.binary_crossentropy(target, prediction)
+
 
 CHANNEL_LAST = True
 if CHANNEL_LAST:
@@ -68,11 +72,13 @@ else:
     concat_axis = 1
     data_format = "channels_first"
 
+
 def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
-                 n_cl_in=1, n_cl_out=1, dropout=0.2, print_summary=False):
+            n_cl_in=1, n_cl_out=1, dropout=0.2, print_summary=False):
     """
     3D U-Net
     """
+
 
     inputs = K.layers.Input(shape=input_shape, name="Input_Image")
 
@@ -124,7 +130,8 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(1e-5),
+                                      kernel_regularizer=K.regularizers.l2(
+                                          1e-5),
                                       padding="same")(conv4)
 
     up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
@@ -143,7 +150,8 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       filters=256, data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(1e-5),
+                                      kernel_regularizer=K.regularizers.l2(
+                                          1e-5),
                                       padding="same")(conv5)
 
     up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
@@ -162,7 +170,8 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
                                       filters=128, data_format=data_format,
                                       kernel_size=(2, 2, 2),
                                       strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(1e-5),
+                                      kernel_regularizer=K.regularizers.l2(
+                                          1e-5),
                                       padding="same")(conv6)
 
     up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
@@ -189,7 +198,7 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     return model, opt
 
 
-def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
+def sensitivity(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
     Sensitivity
     """
@@ -198,7 +207,8 @@ def sensitivity(target, prediction, axis=(1,2,3), smooth = 1.):
                                                     axis=axis) + smooth)
     return tf.reduce_mean(coef)
 
-def specificity(target, prediction, axis=(1,2,3), smooth = 1.):
+
+def specificity(target, prediction, axis=(1, 2, 3), smooth=1.):
     """
     Specificity
     """
