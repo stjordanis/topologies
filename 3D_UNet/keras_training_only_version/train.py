@@ -274,7 +274,7 @@ validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 steps_per_epoch = max(3, len(trainList)//(args.bz*hvd.size()))
-validation_steps = 3*len(testList)
+validation_steps = len(testList)
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
