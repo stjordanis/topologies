@@ -83,8 +83,13 @@ datapath = "../../../data/Brats2018/"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
+
+if hvd.rank() == 0:
+    model_filename = "./saved_model_{}workers/3d_unet_brats2018.hdf5".format(hvd.size())
+else:
+    model_filename = "./saved_model_{}workers/3d_unet_brats2018_worker{}.hdf5".format(hvd.size(),hvd.rank())
 parser.add_argument("--saved_model",
-                    default="./saved_model_{}workers/3d_unet_brats2018.hdf5".format(hvd.size()),
+                    default=model_filename,
                     help="Save model to this path")
 
 args = parser.parse_args()
@@ -181,8 +186,12 @@ checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
                                          save_best_only=True)
 
 # TensorBoard
-tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
-    saved_model_directory, "tensorboard_logs"), update_freq="batch")
+if (hvd.rank() == 0):
+    tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
+        saved_model_directory, "tensorboard_logs"), update_freq="batch")
+else:
+    tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
+        saved_model_directory, "tensorboard_logs_worker{}".format(hvd.rank())), update_freq="batch")
 
 # NOTE:
 # Horovod talks about having callbacks for rank 0 and callbacks
@@ -219,13 +228,9 @@ callbacks = [
     K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
                                   verbose=verbose,
                                   patience=5, min_lr=0.0001),
-    tb_logs  # we need this here otherwise tensorboard delays rank 0
+    tb_logs,  # we need this here otherwise tensorboard delays rank 0
+    checkpoint
 ]
-
-if (hvd.rank()//2) == 0:
-    callbacks.append(checkpoint)
-    #callbacks.append(tb_logs)
-
 
 # Separate file lists into train and test sets
 trainList, testList = get_file_list()
