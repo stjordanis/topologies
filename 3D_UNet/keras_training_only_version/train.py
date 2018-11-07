@@ -265,7 +265,7 @@ model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
-		    validation_steps=validation_steps,
+#		    validation_steps=validation_steps,
                     callbacks=callbacks)
 
 if hvd.rank() == 0:
