@@ -50,7 +50,7 @@ parser.add_argument("--train_test_split",
                     help="Train test split (0-1)")
 parser.add_argument("--epochs",
                     type=int,
-                    default=30,
+                    default=35,
                     help="Number of epochs")
 parser.add_argument("--intraop_threads",
                     type=int,
