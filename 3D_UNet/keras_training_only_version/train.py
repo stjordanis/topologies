@@ -76,7 +76,7 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
-datapath = "../../../data"
+datapath = "../../../data/Brats018/"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
