@@ -210,12 +210,13 @@ callbacks = [
     # Reduce the learning rate if training plateaus.
     K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
                                   verbose=verbose,
-                                  patience=5, min_lr=0.0001)
+                                  patience=5, min_lr=0.0001),
+    tb_logs
 ]
 
 if hvd.rank() == 0:
     callbacks.append(checkpoint)
-    callbacks.append(tb_logs)
+    #callbacks.append(tb_logs)
 
 
 # Separate file lists into train and test sets
@@ -259,7 +260,7 @@ validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
-steps_per_epoch = 7 #max(5, len(trainList)//(args.bz*hvd.size()))
+steps_per_epoch = max(5, len(trainList)//(args.bz*hvd.size()))
 validation_steps = max(3, 3*len(testList)//args.bz)
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
