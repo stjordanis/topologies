@@ -259,7 +259,7 @@ validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
-steps_per_epoch = max(5, len(trainList)//(args.bz*hvd.size()))
+steps_per_epoch = 7 #max(5, len(trainList)//(args.bz*hvd.size()))
 validation_steps = max(3, 3*len(testList)//args.bz)
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
