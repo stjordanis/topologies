@@ -30,6 +30,9 @@ from model import *
 
 from dataloader import DataGenerator
 
+import horovod.keras as hvd
+hvd.init()
+
 parser = argparse.ArgumentParser(
     description="Train 3D U-Net model", add_help=True)
 parser.add_argument("--bz",
@@ -81,7 +84,7 @@ parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
 parser.add_argument("--saved_model",
-                    default="./saved_model/3d_unet_brats2018.hdf5",
+                    default="./saved_model_{}workers/3d_unet_brats2018.hdf5".format(hvd.size()),
                     help="Save model to this path")
 
 args = parser.parse_args()
@@ -90,9 +93,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
-
-import horovod.keras as hvd
-hvd.init()
 
 if hvd.rank() == 0:
     os.system("lscpu")
