@@ -42,7 +42,7 @@ parser.add_argument("--patch_dim",
                     help="Size of the 3D patch")
 parser.add_argument("--lr",
                     type=float,
-                    default=0.0001,
+                    default=0.01,
                     help="Learning rate")
 parser.add_argument("--train_test_split",
                     type=float,
@@ -208,7 +208,9 @@ callbacks = [
     hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
 
     # Reduce the learning rate if training plateaus.
-    K.callbacks.ReduceLROnPlateau(patience=2, verbose=verbose)
+    K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
+                                  verbose=verbose,
+                                  patience=5, min_lr=0.0001)
 ]
 
 if hvd.rank() == 0:
