@@ -182,7 +182,7 @@ except:
 #     model.load_weights(args.saved_model)
 
 checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
-                                         verbose=1,
+                                         verbose=verbose,
                                          save_best_only=True)
 
 # TensorBoard
