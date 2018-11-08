@@ -156,7 +156,7 @@ else:
 model, opt = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
                 n_cl_in=args.number_input_channels,
-                learning_rate=args.lr*hvd.size(),
+                learning_rate=args.lr, #*hvd.size(),
                 n_cl_out=1,  # single channel (greyscale)
                 dropout=0.2,
                 print_summary=print_summary)
@@ -222,7 +222,7 @@ callbacks = [
     # `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
     # the first five epochs. See https://arxiv.org/abs/1706.02677
     # for details.
-    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
+    #hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
 
     # Reduce the learning rate if training plateaus.
     K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
@@ -268,18 +268,18 @@ validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim
                           "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,
                           "augment": False,
-                          "shuffle": False,
+                          "shuffle": True,
                           "seed": 816}
 validation_generator = DataGenerator(testList, **validation_data_params)
 
 # Fit the model
 steps_per_epoch = max(3, len(trainList)//(args.bz*hvd.size()))
-validation_steps = len(testList)
+validation_steps = max(3,3*len(trainList)//(args.bz*hvd.size()))
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
-		            #validation_steps=validation_steps,
+		            validation_steps=validation_steps,
                     callbacks=callbacks)
 
 if hvd.rank() == 0:
