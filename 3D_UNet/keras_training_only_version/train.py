@@ -165,7 +165,8 @@ opt = hvd.DistributedOptimizer(opt)
 
 model.compile(optimizer=opt,
 #              loss=[combined_dice_ce_loss],
-              loss=[dice_coef_loss],
+              #loss=[dice_coef_loss],
+              loss["binary_crossentropy"],
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 
