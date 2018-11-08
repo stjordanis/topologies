@@ -66,7 +66,7 @@ parser.add_argument("--blocktime",
                     help="Block time for CPU threads")
 parser.add_argument("--number_input_channels",
                     type=int,
-                    default=4,
+                    default=1,
                     help="Number of input channels")
 
 parser.add_argument("--print_model",
@@ -82,7 +82,7 @@ parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for BraTS 2018 dataset")
 parser.add_argument("--saved_model",
-                    default="./saved_model/3d_unet_brats2018.hdf5",
+                    default="./saved_model_no_horovod/3d_unet_brats2018.hdf5",
                     help="Save model to this path")
 
 args = parser.parse_args()
