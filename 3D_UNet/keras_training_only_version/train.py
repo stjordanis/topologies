@@ -164,9 +164,8 @@ model, opt = unet_3d(input_shape=input_shape,
 opt = hvd.DistributedOptimizer(opt)
 
 model.compile(optimizer=opt,
-#              loss=[combined_dice_ce_loss],
+              loss=[combined_dice_ce_loss],
               #loss=[dice_coef_loss],
-              loss=["binary_crossentropy"],
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 
