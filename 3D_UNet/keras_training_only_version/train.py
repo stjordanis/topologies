@@ -69,7 +69,7 @@ parser.add_argument("--blocktime",
                     help="Block time for CPU threads")
 parser.add_argument("--number_input_channels",
                     type=int,
-                    default=4,
+                    default=1,
                     help="Number of input channels")
 parser.add_argument("--print_model",
                     action="store_true",
@@ -278,8 +278,8 @@ validation_steps = max(3,3*len(trainList)//(args.bz*hvd.size()))
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
-                    validation_data=validation_generator,
-		            validation_steps=validation_steps,
+                    #validation_data=validation_generator,
+		            #validation_steps=validation_steps,
                     callbacks=callbacks)
 
 if hvd.rank() == 0:
