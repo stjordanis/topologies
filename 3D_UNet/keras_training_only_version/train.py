@@ -85,9 +85,9 @@ parser.add_argument("--data_path",
                     help="Root directory for BraTS 2018 dataset")
 
 if hvd.rank() == 0:
-    model_filename = "./saved_model_{}workers_w_validation/3d_unet_brats2018.hdf5".format(hvd.size())
+    model_filename = "./saved_model_{}workers_w_validation_z_norm/3d_unet_brats2018.hdf5".format(hvd.size())
 else:
-    model_filename = "./saved_model_{}workers_w_validation/3d_unet_brats2018_worker{}.hdf5".format(hvd.size(),hvd.rank())
+    model_filename = "./saved_model_{}workers_w_validation_z_norm/3d_unet_brats2018_worker{}.hdf5".format(hvd.size(),hvd.rank())
 parser.add_argument("--saved_model",
                     default=model_filename,
                     help="Save model to this path")
