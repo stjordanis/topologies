@@ -162,12 +162,12 @@ class DataGenerator(K.utils.Sequence):
             # Clip between -5 and 5
             # Based on  Isensee et al., 2017
             # https://arxiv.org/pdf/1802.10508v1.pdf
-            img_temp[img_temp > 5] = 5
-            img_temp[img_temp < -5] = -5
+#            img_temp[img_temp > 5] = 5
+#            img_temp[img_temp < -5] = -5
 
             # Translate positive and normalize between 0 and 1
-            img_temp = img_temp - np.min(img_temp)
-            img_temp /= np.max(img_temp)
+#            img_temp = img_temp - np.min(img_temp)
+#            img_temp /= np.max(img_temp)
 
             # Clip
             img[...,channel] = img_temp
