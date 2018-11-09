@@ -63,10 +63,10 @@ The `exec_multiworker.sh` script then executes the following on each node:
 ```
 1. Activates the tf virtual environment
 2. Queries the core count and calculates the number of threads to pass to the TensorFlow script
-3. Executes hvd_train.py
+3. Executes main.py
 ```
 
-`hvd_train.py` references `settings.py` for its default learning rate and inter_op threads. 
+`main.py` references `settings.py` for its default learning rate and inter_op threads. 
 
 When training completes, logs will be saved in the directory defined by the `logidir` argument passed into the `./run_multiworker_hvd.sh` script. If no `logidir` was specified, it will default to `tensorboard_multiworker`.
 

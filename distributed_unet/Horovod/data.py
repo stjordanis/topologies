@@ -67,6 +67,21 @@ def load_datasets(FLAGS):
 
     return imgs_train, msks_train, imgs_test, msks_test
 
+def synth_datasets(FLAGS):
+    
+    # Generate synthetic data
+    print("-"*42)
+    print("Generating synthetic training data...")
+    print("-"*42)
+
+    # Shapes taken from the 2016 BraTS dataset
+    imgs_train = np.zeros((27661, 128, 128, 1))
+    msks_train = np.zeros((27661, 128, 128, 1))
+    imgs_test = np.zeros((4889, 128, 128, 1))
+    msks_test = np.zeros((4889, 128, 128, 1))
+
+    return imgs_train, msks_train, imgs_test, msks_test
+
 def get_batch(imgs, msks, batch_size):
 
     idx = np.random.choice(len(imgs), batch_size)

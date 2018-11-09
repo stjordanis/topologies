@@ -27,7 +27,7 @@ import tensorflow as tf
 from tensorflow import layers
 
 from model import define_model, validate_model
-from data import load_datasets, get_batch
+from data import load_datasets, synth_datasets, get_batch
 
 import os
 import psutil
@@ -58,7 +58,7 @@ tf.app.flags.DEFINE_string("output_path",
 
 tf.app.flags.DEFINE_string("data_path",
                             settings.DATA_PATH,
-                            "Data directory")
+                            "Data directory. Set to 'synthetic' to generate synthetic train/test data")
 
 tf.app.flags.DEFINE_boolean("no_horovod", False,
                             "Don't use Horovod. Single node training only.")
@@ -89,8 +89,11 @@ def main(_):
 
     last_epoch_start_time = start_time
 
-    # Load datasets
-    imgs_train, msks_train, imgs_test, msks_test = load_datasets(FLAGS)
+    # Load or generate datasets
+    if FLAGS.data_path == 'synthetic':
+	imgs_train, msks_train, imgs_test, msks_test = synth_datasets(FLAGS)
+    else:
+        imgs_train, msks_train, imgs_test, msks_test = load_datasets(FLAGS)
 
     if not FLAGS.no_horovod:
         # Initialize Horovod.

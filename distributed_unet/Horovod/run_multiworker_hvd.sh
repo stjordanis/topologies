@@ -33,7 +33,7 @@ echo "Running $num_workers_per_node worker(s)/node on $num_nodes nodes..."
 echo Using $num_processes total workers.
 echo nodes are: `cat $node_ips`
 
-mpirun --mca btl_tcp_if_include eth0  -np $num_processes \
+mpirun --allow-run-as-root --mca btl_tcp_if_include eth0  -np $num_processes \
 -H `cat $node_ips` \
 --map-by socket \
 -cpus-per-proc $physical_cores \
