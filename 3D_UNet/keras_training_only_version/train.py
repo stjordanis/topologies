@@ -45,7 +45,7 @@ parser.add_argument("--patch_dim",
                     help="Size of the 3D patch")
 parser.add_argument("--lr",
                     type=float,
-                    default=0.01,
+                    default=0.005,
                     help="Learning rate")
 parser.add_argument("--train_test_split",
                     type=float,
@@ -156,7 +156,7 @@ else:
 model, opt = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
                 n_cl_in=args.number_input_channels,
-                learning_rate=args.lr, #*hvd.size(),
+                learning_rate=args.lr*hvd.size(),
                 n_cl_out=1,  # single channel (greyscale)
                 dropout=0.2,
                 print_summary=print_summary)
@@ -222,10 +222,10 @@ callbacks = [
     # `lr = 1.0` ---> `lr = 1.0 * hvd.size()` during
     # the first five epochs. See https://arxiv.org/abs/1706.02677
     # for details.
-    #hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
+    hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=verbose),
 
     # Reduce the learning rate if training plateaus.
-    K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
+    K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.6,
                                   verbose=verbose,
                                   patience=5, min_lr=0.0001),
     tb_logs,  # we need this here otherwise tensorboard delays rank 0

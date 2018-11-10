@@ -50,7 +50,7 @@ config = tf.ConfigProto(
 sess = tf.Session(config=config)
 K.backend.set_session(sess)
 
-model = K.models.load_model(os.path.join("saved_model",args.model),
+model = K.models.load_model(args.model,
                             custom_objects={"dice_coef":dice_coef,
                             "dice_coef_loss":dice_coef_loss,
                             "sensitivity":sensitivity,
