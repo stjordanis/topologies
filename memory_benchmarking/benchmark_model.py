@@ -102,6 +102,14 @@ parser.add_argument("--inference",
 					action="store_true",
 					default=False,
 					help="Test inference speed. Default=Test training speed")
+parser.add_argument("--ngraph",
+					action="store_true",
+					default=False,
+					help="Use ngraph")
+parser.add_argument("--keras_api",
+					action="store_true",
+					default=False,
+					help="Use Keras API. False=Use tf.keras")
 
 args = parser.parse_args()
 
@@ -126,7 +134,16 @@ print("args = {}".format(args))
 print("OS: {}".format(os.system("uname -a")))
 print("TensorFlow version: {}".format(tf.__version__))
 
-import keras as K
+if args.keras_api:
+	import keras as K
+	print("Using Keras API")
+else:
+	from tensorflow import keras as K
+	print("Using tf.keras")
+
+if args.ngraph:
+	print("Using nGraph")
+	import ngraph_bridge
 
 print("Keras API version: {}".format(K.__version__))
 

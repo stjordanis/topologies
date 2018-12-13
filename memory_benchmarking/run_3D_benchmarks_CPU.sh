@@ -4,11 +4,11 @@ pip install memory_profiler
 rm *.dat 
 rm *.log
 
-for dim_length in 32 56 64 80 128 184 200 #256 320 400 480 512 600
+for dim_length in 184 200 256 #32 56 64 80 128 184 200 #256 320 400 480 512 600
 do
 
    num=1000000  # Run for a long time because timeout will automatically stop the script after a certain number of seconds
-   secs=600  # Number of seconds to record memory
+   secs=2000  # Number of seconds to record memory
 
    # Training batch size 1
    echo "Training batch size 1, dim_length ${dim_length}"
