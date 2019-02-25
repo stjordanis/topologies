@@ -20,7 +20,7 @@
 
 import os
 
-BASE = "/mnt/data/medical/brats/Brats2016"
+BASE = "../../../data/Brats2016/"
 DATA_PATH = os.path.join(BASE, "128x128")
 OUTPUT_PATH = os.path.join(BASE, "output/")
 
