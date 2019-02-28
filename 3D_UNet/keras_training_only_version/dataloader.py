@@ -27,7 +27,9 @@ class DataGenerator(K.utils.Sequence):
     """
     Generates data for Keras/TensorFlow
 
-    This uses the Keras Sequence which is better for multiprocessing.
+    This uses the Keras Sequence which is better data pipeline.
+    It will allow for multiple data generator processes and
+    batch pre-fetching.
     The main input the dataloader is a list of filenames containing
     the images (MRIs) to load. In the case of BraTS, the images and masks
     have the same name but a different suffix. For example, the FLAIR image
@@ -67,6 +69,7 @@ class DataGenerator(K.utils.Sequence):
 
         self.list_IDs = self.get_file_list()
 
+        self.seed = seed
         np.random.seed(seed)
         self.on_epoch_end()   # Generate the sequence
 
@@ -109,7 +112,7 @@ class DataGenerator(K.utils.Sequence):
         don't have ground truth masks for this.
         """
         # Set the random seed so that always get same random mix
-        np.random.seed(816)
+        np.random.seed(self.seed)
         numFiles = experiment_data["numTraining"]
         idxList = np.arange(numFiles)  # List of file indices
         randomIdx = np.random.random(numFiles)  # List of random numbers
