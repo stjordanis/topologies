@@ -67,10 +67,9 @@ class DataGenerator(K.utils.Sequence):
         self.shuffle = shuffle
         self.augment = augment
 
+        self.seed = seed
         self.list_IDs = self.get_file_list()
 
-        self.seed = seed
-        np.random.seed(seed)
         self.on_epoch_end()   # Generate the sequence
 
         self.num_batches = self.__len__()
@@ -111,10 +110,10 @@ class DataGenerator(K.utils.Sequence):
         validation lists. We won't use the testing set since we
         don't have ground truth masks for this.
         """
-        # Set the random seed so that always get same random mix
-        np.random.seed(self.seed)
         numFiles = experiment_data["numTraining"]
         idxList = np.arange(numFiles)  # List of file indices
+
+        np.random.seed(self.seed)
         randomIdx = np.random.random(numFiles)  # List of random numbers
         # Random number go from 0 to 1. So anything above
         # self.train_split is in the validation list.
