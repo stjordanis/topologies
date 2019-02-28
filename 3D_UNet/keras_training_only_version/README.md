@@ -1,6 +1,6 @@
 # 3D U-Net for Medical Decathlon Dataset
 
-![3d video](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/img7.avi)
+![predC](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/predC.png)
 
 Trains a 3D U-Net on the brain tumor segmentation (BraTS) subset of the [Medical Segmentation Decathlon](http://medicaldecathlon.com/) dataset.
 
@@ -25,4 +25,4 @@ e.g.
 replacing `--data_path` and `--saved_model` with your local paths/files.
 
  
- 
+ ![predB](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/predB.png)
