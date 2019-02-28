@@ -19,15 +19,13 @@
 import keras as K
 import numpy as np
 import os
+import json
 
 import nibabel as nib
-
 
 class DataGenerator(K.utils.Sequence):
     """
     Generates data for Keras/TensorFlow
-
-    Code based on https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 
     This uses the Keras Sequence which is better for multiprocessing.
     The main input the dataloader is a list of filenames containing
@@ -43,7 +41,9 @@ class DataGenerator(K.utils.Sequence):
     """
 
     def __init__(self,
-                 list_IDs,     # List of file names for raw images/masks
+                 isTraining,     # Boolean: Is this train or test set
+                 data_path,    # File path for data
+                 train_test_split=0.85, # Train test split
                  batch_size=8,  # batch size
                  dim=(128, 128, 128),  # Dimension of images/masks
                  n_in_channels=1,  # Number of channels in image
@@ -54,16 +54,76 @@ class DataGenerator(K.utils.Sequence):
         """
         Initialization
         """
+        self.data_path = data_path
+        self.isTraining = isTraining
         self.dim = dim
         self.batch_size = batch_size
-        self.list_IDs = list_IDs
+        self.train_test_split = train_test_split
+
         self.n_in_channels = n_in_channels
         self.n_out_channels = n_out_channels
         self.shuffle = shuffle
         self.augment = augment
 
+        self.list_IDs = self.get_file_list()
+
         np.random.seed(seed)
         self.on_epoch_end()   # Generate the sequence
+
+        self.num_batches = self.__len__()
+
+    def get_length(self):
+        return len(self.list_IDs)
+
+    def get_file_list(self):
+        """
+        Get list of the files from the BraTS raw data
+        Split into training and testing sets.
+        """
+        fileList = []
+
+        json_filename = os.path.join(self.data_path, "dataset.json")
+
+        try:
+            with open(json_filename, "r") as fp:
+                experiment_data = json.load(fp)
+        except IOError as e:
+            print("File {} doesn't exist. It should be part of the "
+                  "Decathlon directory".format(json_filename))
+
+        # Print information about the Decathlon experiment data
+        print("*"*30)
+        print("="*30)
+        print("Dataset name:        ", experiment_data["name"])
+        print("Dataset description: ", experiment_data["description"])
+        print("Tensor image size:   ", experiment_data["tensorImageSize"])
+        print("Dataset release:     ", experiment_data["release"])
+        print("Dataset reference:   ", experiment_data["reference"])
+        print("Dataset license:     ", experiment_data["licence"])  # sic
+        print("="*30)
+        print("*"*30)
+
+        """
+        Randomize the file list. Then separate into training and
+        validation lists. We won't use the testing set since we
+        don't have ground truth masks for this.
+        """
+        # Set the random seed so that always get same random mix
+        np.random.seed(816)
+        numFiles = experiment_data["numTraining"]
+        idxList = np.arange(numFiles)  # List of file indices
+        randomIdx = np.random.random(numFiles)  # List of random numbers
+        # Random number go from 0 to 1. So anything above
+        # self.train_split is in the validation list.
+        trainIdx = idxList[randomIdx < self.train_test_split]
+        testIdx = idxList[randomIdx >= self.train_test_split]
+
+        if self.isTraining:
+            print("Number of training MRIs = {}".format(len(trainIdx)))
+            return trainIdx
+        else:
+            print("Number of test MRIs = {}".format(len(testIdx)))
+            return testIdx
 
     def __len__(self):
         """
@@ -86,6 +146,12 @@ class DataGenerator(K.utils.Sequence):
         X, y = self.__data_generation(list_IDs_temp)
 
         return X, y
+
+    def get_batch(self, index):
+        """
+        Public method to get one batch of data
+        """
+        return self.__getitem__(index)
 
     def on_epoch_end(self):
         """
@@ -159,17 +225,6 @@ class DataGenerator(K.utils.Sequence):
             img_temp = img[...,channel]
             img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
 
-            # Clip between -5 and 5
-            # Based on  Isensee et al., 2017
-            # https://arxiv.org/pdf/1802.10508v1.pdf
-#            img_temp[img_temp > 5] = 5
-#            img_temp[img_temp < -5] = -5
-
-            # Translate positive and normalize between 0 and 1
-#            img_temp = img_temp - np.min(img_temp)
-#            img_temp /= np.max(img_temp)
-
-            # Clip
             img[...,channel] = img_temp
 
         return img
@@ -182,6 +237,15 @@ class DataGenerator(K.utils.Sequence):
         Change this to suit your dataset.
         """
 
+        json_filename = os.path.join(self.data_path, "dataset.json")
+        try:
+            with open(json_filename, "r") as fp:
+                experiment_data = json.load(fp)
+        except IOError as e:
+            print("File {} doesn't exist. It should be part of the "
+                  "Decathlon directory".format(json_filename))
+
+
         # Make empty arrays for the images and mask batches
         imgs = np.zeros((self.batch_size, *self.dim, self.n_in_channels))
         msks = np.zeros((self.batch_size, *self.dim, self.n_out_channels))
@@ -189,40 +253,38 @@ class DataGenerator(K.utils.Sequence):
         idx = 0
         for file in list_IDs_temp:
 
-            # T2-FLAIR channel
-            imgFile = os.path.join(
-                file, os.path.basename(file) + "_flair.nii.gz")
+            imgFile = os.path.join(self.data_path,
+                      experiment_data["training"][file]["image"])
 
-            img_flair = np.array(nib.load(imgFile).dataobj)
-            img_dim = np.shape(img_flair)
+            img_temp = np.array(nib.load(imgFile).dataobj)
 
-            img = np.zeros((img_dim[0], img_dim[1], img_dim[2], self.n_in_channels))
-
-            img[...,0] = img_flair
-
-            if self.n_in_channels > 1:
-
-                # Adding T1 constrast enhanced MRI
-                imgFile = os.path.join(
-                    file, os.path.basename(file) + "_t1ce.nii.gz")
-                img[...,1] = np.array(nib.load(imgFile).dataobj)
-
-                # Adding T1 MRI
-                imgFile = os.path.join(
-                    file, os.path.basename(file) + "_t1.nii.gz")
-                img[...,2] = np.array(nib.load(imgFile).dataobj)
-
-                # Adding T2 MRI
-                imgFile = os.path.join(
-                    file, os.path.basename(file) + "_t2.nii.gz")
-                img[...,3] = np.array(nib.load(imgFile).dataobj)
-
+            """
+            "modality": {
+                 "0": "FLAIR",
+                 "1": "T1w",
+                 "2": "t1gd",
+                 "3": "T2w"
+            """
+            if self.n_in_channels == 1:
+                img = img_temp[:,:,:,[0]]  # FLAIR channel
+            else:
+                img = img_temp
 
             # Get mask data
-            mskFile = os.path.join(
-                file, os.path.basename(file) + "_seg.nii.gz")
+            mskFile = os.path.join(self.data_path,
+                                   experiment_data["training"][file]["label"])
+
             msk = np.array(nib.load(mskFile).dataobj)
-            msk[msk > 0] = 1.0   # Combine masks to get whole tumor
+
+            """
+            "labels": {
+                 "0": "background",
+                 "1": "edema",
+                 "2": "non-enhancing tumor",
+                 "3": "enhancing tumour"}
+             """
+            # Combine all masks but background
+            msk[msk > 0] = 1.0
             msk = np.expand_dims(msk, -1)
 
             # Take a crop of the patch_dim size

@@ -79,116 +79,128 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     3D U-Net
     """
 
-
-    inputs = K.layers.Input(shape=input_shape, name="Input_Image")
+    inputs = K.layers.Input(shape=input_shape, name="MRImages")
 
     params = dict(kernel_size=(3, 3, 3), activation=None,
                   padding="same", data_format=data_format,
-                  kernel_initializer="he_uniform",
-                  kernel_regularizer=K.regularizers.l2(1e-5))
+                  kernel_initializer="he_uniform")
 
-    conv1 = K.layers.Conv3D(name="conv1a", filters=32, **params)(inputs)
-    conv1 = K.layers.BatchNormalization()(conv1)
-    conv1 = K.layers.Activation("relu")(conv1)
-    conv1 = K.layers.Conv3D(name="conv1b", filters=64, **params)(conv1)
-    conv1 = K.layers.BatchNormalization()(conv1)
-    conv1 = K.layers.Activation("relu")(conv1)
-    pool1 = K.layers.MaxPooling3D(name="pool1", pool_size=(2, 2, 2))(conv1)
+    # Transposed convolution parameters
+    params_trans = dict(data_format=data_format,
+                        kernel_size=(2, 2, 2), strides=(2, 2, 2),
+                        padding="same")
 
-    conv2 = K.layers.Conv3D(name="conv2a", filters=64, **params)(pool1)
-    conv2 = K.layers.BatchNormalization()(conv2)
-    conv2 = K.layers.Activation("relu")(conv2)
-    conv2 = K.layers.Conv3D(name="conv2b", filters=128, **params)(conv2)
-    conv2 = K.layers.BatchNormalization()(conv2)
-    conv2 = K.layers.Activation("relu")(conv2)
-    pool2 = K.layers.MaxPooling3D(name="pool2", pool_size=(2, 2, 2))(conv2)
+    fms = 16  #32 or 16 depending on your memory size
 
-    conv3 = K.layers.Conv3D(name="conv3a", filters=128, **params)(pool2)
-    conv3 = K.layers.BatchNormalization()(conv3)
-    conv3 = K.layers.Activation("relu")(conv3)
-    # Trying dropout layers earlier on, as indicated in the paper
-    conv3 = K.layers.SpatialDropout3D(dropout)(conv3)
-    conv3 = K.layers.Conv3D(name="conv3b", filters=256, **params)(conv3)
-    conv3 = K.layers.BatchNormalization()(conv3)
-    conv3 = K.layers.Activation("relu")(conv3)
-    pool3 = K.layers.MaxPooling3D(name="pool3", pool_size=(2, 2, 2))(conv3)
+    encodeA = K.layers.Conv3D(name="encodeAa", filters=fms, **params)(inputs)
+    encodeA = K.layers.BatchNormalization()(encodeA)
+    encodeA = K.layers.Activation("relu")(encodeA)
+    encodeA = K.layers.Conv3D(name="encodeAb", filters=fms, **params)(encodeA)
+    encodeA = K.layers.BatchNormalization()(encodeA)
+    encodeA = K.layers.Activation("relu")(encodeA)
+    poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(encodeA)
 
-    conv4 = K.layers.Conv3D(name="conv4a", filters=256, **params)(pool3)
-    conv4 = K.layers.BatchNormalization()(conv4)
-    conv4 = K.layers.Activation("relu")(conv4)
-    # Trying dropout layers earlier on, as indicated in the paper
-    conv4 = K.layers.SpatialDropout3D(dropout)(conv4)
+    encodeB = K.layers.Conv3D(name="encodeBa", filters=fms*2, **params)(poolA)
+    encodeB = K.layers.BatchNormalization()(encodeB)
+    encodeB = K.layers.Activation("relu")(encodeB)
+    encodeB = K.layers.Conv3D(name="encodeBb", filters=fms*2, **params)(encodeB)
+    poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(encodeB)
 
-    conv4 = K.layers.Conv3D(name="conv4b", filters=512, **params)(conv4)
-    conv4 = K.layers.BatchNormalization()(conv4)
-    conv4 = K.layers.Activation("relu")(conv4)
+    encodeC = K.layers.Conv3D(name="encodeCa", filters=fms*4, **params)(poolB)
+    encodeC = K.layers.BatchNormalization()(encodeC)
+    encodeC = K.layers.Activation("relu")(encodeC)
+    encodeC = K.layers.SpatialDropout3D(dropout,
+                                        data_format=data_format)(encodeC)
+    encodeC = K.layers.Conv3D(name="encodeCb", filters=fms*4, **params)(encodeC)
+    encodeC = K.layers.BatchNormalization()(encodeC)
+    encodeC = K.layers.Activation("relu")(encodeC)
 
-    if use_upsampling:
-        up = K.layers.UpSampling3D(name="up4", size=(2, 2, 2))(conv4)
-    else:
-        up = K.layers.Conv3DTranspose(name="transConv4", filters=512,
-                                      data_format=data_format,
-                                      kernel_size=(2, 2, 2),
-                                      strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(
-                                          1e-5),
-                                      padding="same")(conv4)
+    poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(encodeC)
 
-    up4 = K.layers.concatenate([up, conv3], axis=concat_axis)
+    encodeD = K.layers.Conv3D(name="encodeDa", filters=fms*8, **params)(poolC)
+    encodeD = K.layers.BatchNormalization()(encodeD)
+    encodeD = K.layers.Activation("relu")(encodeD)
+    encodeD = K.layers.SpatialDropout3D(dropout,
+                                        data_format=data_format)(encodeD)
+    encodeD = K.layers.Conv3D(name="encodeDb", filters=fms*8, **params)(encodeD)
+    encodeD = K.layers.BatchNormalization()(encodeD)
+    encodeD = K.layers.Activation("relu")(encodeD)
 
-    conv5 = K.layers.Conv3D(name="conv5a", filters=256, **params)(up4)
-    conv5 = K.layers.BatchNormalization()(conv5)
-    conv5 = K.layers.Activation("relu")(conv5)
-    conv5 = K.layers.Conv3D(name="conv5b", filters=256, **params)(conv5)
-    conv5 = K.layers.BatchNormalization()(conv5)
-    conv5 = K.layers.Activation("relu")(conv5)
+    poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(encodeD)
+
+    encodeE = K.layers.Conv3D(name="encodeEa", filters=fms*16, **params)(poolD)
+    encodeE = K.layers.BatchNormalization()(encodeE)
+    encodeE = K.layers.Activation("relu")(encodeE)
+    encodeE = K.layers.Conv3D(name="encodeEb", filters=fms*16, **params)(encodeE)
+    encodeE = K.layers.BatchNormalization()(encodeE)
+    encodeE = K.layers.Activation("relu")(encodeE)
 
     if use_upsampling:
-        up = K.layers.UpSampling3D(name="up5", size=(2, 2, 2))(conv5)
+        up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2),
+                                   interpolation="bilinear")(encodeE)
     else:
-        up = K.layers.Conv3DTranspose(name="transConv5",
-                                      filters=256, data_format=data_format,
-                                      kernel_size=(2, 2, 2),
-                                      strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(
-                                          1e-5),
-                                      padding="same")(conv5)
+        up = K.layers.Conv3DTranspose(name="transconvE", filters=fms*8,
+                                      **params_trans)(encodeE)
+    concatD = K.layers.concatenate([up, encodeD], axis=concat_axis, name="concatD")
 
-    up5 = K.layers.concatenate([up, conv2], axis=concat_axis)
-
-    conv6 = K.layers.Conv3D(name="conv6a", filters=128, **params)(up5)
-    conv6 = K.layers.BatchNormalization()(conv6)
-    conv6 = K.layers.Activation("relu")(conv6)
-    conv6 = K.layers.Conv3D(name="conv6b", filters=128, **params)(conv6)
-    conv6 = K.layers.BatchNormalization()(conv6)
-    conv6 = K.layers.Activation("relu")(conv6)
+    decodeC = K.layers.Conv3D(name="decodeCa", filters=fms*8, **params)(concatD)
+    decodeC = K.layers.BatchNormalization()(decodeC)
+    decodeC = K.layers.Activation("relu")(decodeC)
+    decodeC = K.layers.Conv3D(name="decodeCb", filters=fms*8, **params)(decodeC)
+    decodeC = K.layers.BatchNormalization()(decodeC)
+    decodeC = K.layers.Activation("relu")(decodeC)
 
     if use_upsampling:
-        up = K.layers.UpSampling3D(name="up6", size=(2, 2, 2))(conv6)
+        up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2),
+                                   interpolation="bilinear")(decodeC)
     else:
-        up = K.layers.Conv3DTranspose(name="transConv6",
-                                      filters=128, data_format=data_format,
-                                      kernel_size=(2, 2, 2),
-                                      strides=(2, 2, 2),
-                                      kernel_regularizer=K.regularizers.l2(
-                                          1e-5),
-                                      padding="same")(conv6)
+        up = K.layers.Conv3DTranspose(name="transconvC", filters=fms*4,
+                                      **params_trans)(decodeC)
+    concatC = K.layers.concatenate([up, encodeC], axis=concat_axis, name="concatC")
 
-    up6 = K.layers.concatenate([up, conv1], axis=concat_axis)
+    decodeB = K.layers.Conv3D(name="decodeBa", filters=fms*4, **params)(concatC)
+    decodeB = K.layers.BatchNormalization()(decodeB)
+    decodeB = K.layers.Activation("relu")(decodeB)
+    decodeB = K.layers.Conv3D(name="decodeBb", filters=fms*4, **params)(decodeB)
+    decodeB = K.layers.BatchNormalization()(decodeB)
+    decodeB = K.layers.Activation("relu")(decodeB)
 
-    conv7 = K.layers.Conv3D(name="conv7a", filters=64, **params)(up6)
-    conv7 = K.layers.BatchNormalization()(conv7)
-    conv7 = K.layers.Activation("relu")(conv7)
-    conv7 = K.layers.Conv3D(name="conv7b", filters=64, **params)(conv7)
-    conv7 = K.layers.BatchNormalization()(conv7)
-    conv7 = K.layers.Activation("relu")(conv7)
-    pred = K.layers.Conv3D(name="Prediction_Mask", filters=n_cl_out,
-                           kernel_size=(1, 1, 1),
-                           data_format=data_format,
-                           kernel_regularizer=K.regularizers.l2(1e-5),
-                           activation="sigmoid")(conv7)
+    if use_upsampling:
+        up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2),
+                                   interpolation="bilinear")(decodeB)
+    else:
+        up = K.layers.Conv3DTranspose(name="transconvB", filters=fms*2,
+                                      **params_trans)(decodeB)
+    concatB = K.layers.concatenate([up, encodeB], axis=concat_axis, name="concatB")
 
-    model = K.models.Model(inputs=[inputs], outputs=[pred])
+    decodeA = K.layers.Conv3D(name="decodeAa", filters=fms*2, **params)(concatB)
+    decodeA = K.layers.BatchNormalization()(decodeA)
+    decodeA = K.layers.Activation("relu")(decodeA)
+    decodeA = K.layers.Conv3D(name="decodeAb", filters=fms*2, **params)(decodeA)
+    decodeA = K.layers.BatchNormalization()(decodeA)
+    decodeA = K.layers.Activation("relu")(decodeA)
+
+    if use_upsampling:
+        up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2),
+                                   interpolation="bilinear")(decodeA)
+    else:
+        up = K.layers.Conv3DTranspose(name="transconvA", filters=fms,
+                                      **params_trans)(decodeA)
+    concatA = K.layers.concatenate([up, encodeA], axis=concat_axis, name="concatA")
+
+    convOut = K.layers.Conv3D(name="convOuta", filters=fms, **params)(concatA)
+    convOut = K.layers.BatchNormalization()(convOut)
+    convOut = K.layers.Activation("relu")(convOut)
+    convOut = K.layers.Conv3D(name="convOutb", filters=fms, **params)(convOut)
+    convOut = K.layers.BatchNormalization()(convOut)
+    convOut = K.layers.Activation("relu")(convOut)
+
+    prediction = K.layers.Conv3D(name="PredictionMask",
+                                 filters=n_cl_out, kernel_size=(1, 1, 1),
+                                 data_format=data_format,
+                                 activation="sigmoid")(convOut)
+
+    model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
     if print_summary:
         model.summary()

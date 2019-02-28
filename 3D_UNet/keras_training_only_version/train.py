@@ -18,74 +18,14 @@
 import keras as K
 import numpy as np
 
-import random
 import os
-import sys
-import argparse
-import psutil
-import time
 import datetime
 import tensorflow as tf
 from model import *
 
 from dataloader import DataGenerator
 
-parser = argparse.ArgumentParser(
-    description="Train 3D U-Net model", add_help=True)
-parser.add_argument("--bz",
-                    type=int,
-                    default=8,
-                    help="Batch size")
-parser.add_argument("--patch_dim",
-                    type=int,
-                    default=128,
-                    help="Size of the 3D patch")
-parser.add_argument("--lr",
-                    type=float,
-                    default=0.01,
-                    help="Learning rate")
-parser.add_argument("--train_test_split",
-                    type=float,
-                    default=0.85,
-                    help="Train test split (0-1)")
-parser.add_argument("--epochs",
-                    type=int,
-                    default=35,
-                    help="Number of epochs")
-parser.add_argument("--intraop_threads",
-                    type=int,
-                    default=psutil.cpu_count(logical=False)-2,
-                    help="Number of intraop threads")
-parser.add_argument("--interop_threads",
-                    type=int,
-                    default=1,
-                    help="Number of interop threads")
-parser.add_argument("--blocktime",
-                    type=int,
-                    default=1,
-                    help="Block time for CPU threads")
-parser.add_argument("--number_input_channels",
-                    type=int,
-                    default=1,
-                    help="Number of input channels")
-
-parser.add_argument("--print_model",
-                    action="store_true",
-                    default=False,
-                    help="Print the summary of the model layers")
-parser.add_argument("--use_upsampling",
-                    action="store_true",
-                    default=False,
-                    help="Use upsampling instead of transposed convolution")
-datapath = "../../../data/Brats2018/"
-parser.add_argument("--data_path",
-                    default=datapath,
-                    help="Root directory for BraTS 2018 dataset")
-parser.add_argument("--saved_model",
-                    default="./saved_model_no_horovod/3d_unet_brats2018.hdf5",
-                    help="Save model to this path")
-
-args = parser.parse_args()
+from argparser import args
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
@@ -93,11 +33,12 @@ os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 
 os.system("lscpu")
-print("Started script on {}".format(datetime.datetime.now()))
+start_time = datetime.datetime.now()
+print("Started script on {}".format(start_time))
 
-print("args = {}".format(args))
 os.system("uname -a")
 print("TensorFlow version: {}".format(tf.__version__))
+print("Intel MKL-DNN is enabled = {}".format(tf.pywrap_tensorflow.IsMklEnabled()))
 
 print("Keras API version: {}".format(K.__version__))
 
@@ -108,38 +49,11 @@ config = tf.ConfigProto(
 
 sess = tf.Session(config=config)
 
-
 K.backend.set_session(sess)
-
-
-def get_file_list(data_path=args.data_path):
-    """
-    Get list of the files from the BraTS raw data
-    Split into training and testing sets.
-    """
-    fileList = []
-    for subdir, dir, files in os.walk(data_path):
-        # Make sure directory has data
-        if os.path.isfile(os.path.join(subdir,
-                                       os.path.basename(subdir)
-                                       + "_flair.nii.gz")):
-            fileList.append(subdir)
-
-    random.Random(816).shuffle(fileList)
-    n_files = len(fileList)
-
-    train_length = int(args.train_test_split*n_files)
-    trainList = fileList[:train_length]
-    testList = fileList[train_length:]
-
-    return trainList, testList
-
 
 input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, args.number_input_channels]
 
-
 print_summary = args.print_model
-verbose = 1
 
 model, opt = unet_3d(input_shape=input_shape,
                 use_upsampling=args.use_upsampling,
@@ -155,8 +69,6 @@ model.compile(optimizer=opt,
               metrics=[dice_coef, "accuracy",
                        sensitivity, specificity])
 
-start_time = time.time()
-
 # Save best model to hdf5 file
 saved_model_directory = os.path.dirname(args.saved_model)
 try:
@@ -164,11 +76,13 @@ try:
 except:
     os.mkdir(saved_model_directory)
 
-# if os.path.isfile(args.saved_model):
-#     model.load_weights(args.saved_model)
+# If there is a current saved file, then load weights and start from
+# there.
+if os.path.isfile(args.saved_model):
+    model.load_weights(args.saved_model)
 
 checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
-                                         verbose=verbose,
+                                         verbose=1,
                                          save_best_only=True)
 
 # TensorBoard
@@ -181,47 +95,60 @@ reduce_lr = K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
 
 callbacks = [checkpoint, tb_logs, reduce_lr]
 
-# Separate file lists into train and test sets
-trainList, testList = get_file_list()
-with open("trainlist.txt", "w") as f:
-    for item in trainList:
-        f.write("{}\n".format(item))
-
-with open("testlist.txt", "w") as f:
-    for item in testList:
-        f.write("{}\n".format(item))
-
-print("Number of training MRIs = {}".format(len(trainList)))
-print("Number of test MRIs = {}".format(len(testList)))
-
-seed = 816
 training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
                         "batch_size": args.bz,
                         "n_in_channels": args.number_input_channels,
                         "n_out_channels": 1,
+                        "train_test_split": args.train_test_split,
                         "augment": True,
                         "shuffle": True,
-                        "seed": seed}
+                        "seed": args.random_seed}
 
-training_generator = DataGenerator(trainList, **training_data_params)
+training_generator = DataGenerator(True, args.data_path,
+                                   **training_data_params)
 
 validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
-                          "batch_size": args.bz,
+                          "batch_size": 1,
                           "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,
+                          "train_test_split": args.train_test_split,
                           "augment": False,
                           "shuffle": False,
-                          "seed": 816}
-validation_generator = DataGenerator(testList, **validation_data_params)
+                          "seed": args.random_seed}
+validation_generator = DataGenerator(False, args.data_path,
+                                     **validation_data_params)
 
 # Fit the model
+"""
+Keras Data Pipeline using Sequence generator
+https://www.tensorflow.org/api_docs/python/tf/keras/utils/Sequence
+
+The sequence generator allows for Keras to load batches at runtime.
+It's very useful in the case when your entire dataset won't fit into
+memory. The Keras sequence will load one batch at a time to
+feed to the model. You can specify pre-fetching of batches to
+make sure that an additional batch is in memory when the previous
+batch finishes processing.
+
+max_queue_size : Specifies how many batches will be prepared (pre-fetched)
+in the queue. Does not indicate multiple generator instances.
+
+workers, use_multiprocessing: Generates multiple generator instances.
+
+num_data_loaders is defined in argparser.py
+"""
+
+num_prefetched_batches = 3
+
 model.fit_generator(training_generator,
-                    epochs=args.epochs, verbose=verbose,
+                    epochs=args.epochs, verbose=1,
                     validation_data=validation_generator,
-                    callbacks=callbacks)
+                    callbacks=callbacks,
+                    max_queue_size=num_prefetched_batches,
+                    workers=args.num_data_loaders,
+                    use_multiprocessing=False) #True)
 
-
-stop_time = time.time()
-print("\n\nTotal time = {:,.3f} seconds".format(
-    stop_time - start_time))
-print("Stopped script on {}".format(datetime.datetime.now()))
+stop_time = datetime.datetime.now()
+print("Started script on {}".format(start_time))
+print("Stopped script on {}".format(stop_time))
+print("\n\nTotal time for training model = {}".format(stop_time - start_time))

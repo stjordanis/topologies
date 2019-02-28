@@ -1,41 +1,17 @@
 import numpy as np
-import random
-import os
-import argparse
-import psutil
-import time
 import datetime
+from tqdm import tqdm
+
+from argparser import args
+
 import tensorflow as tf
 from model import *
+
+from dataloader import DataGenerator
+
 import nibabel as nib
 
-parser = argparse.ArgumentParser(
-    description="Train 3D U-Net model", add_help=True)
-parser.add_argument("--bz",
-                    type=int,
-                    default=4,
-                    help="Batch size")
-parser.add_argument("--patch_dim",
-                    type=int,
-                    default=128,
-                    help="Size of the 3D patch")
-parser.add_argument("--intraop_threads",
-                    type=int,
-                    default=psutil.cpu_count(logical=False)-4,
-                    help="Number of intraop threads")
-parser.add_argument("--interop_threads",
-                    type=int,
-                    default=2,
-                    help="Number of interop threads")
-parser.add_argument("--blocktime",
-                    type=int,
-                    default=0,
-                    help="Block time for CPU threads")
-parser.add_argument("--model",
-                    default="3d_unet_brats2018.hdf5",
-                    help="Trained model to load")
-
-args = parser.parse_args()
+print("Started script on {}".format(datetime.datetime.now()))
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
@@ -48,9 +24,12 @@ config = tf.ConfigProto(
     intra_op_parallelism_threads=args.intraop_threads)
 
 sess = tf.Session(config=config)
+
+import keras as K
+
 K.backend.set_session(sess)
 
-model = K.models.load_model(args.model,
+model = K.models.load_model(args.saved_model,
                             custom_objects={"dice_coef":dice_coef,
                             "dice_coef_loss":dice_coef_loss,
                             "sensitivity":sensitivity,
@@ -58,11 +37,21 @@ model = K.models.load_model(args.model,
                             "combined_dice_ce_loss":combined_dice_ce_loss})
 
 print("Loading images and masks from test set")
-print("imgs_test_3d.npy, msks_test_3d.npy")
-imgs = np.load("imgs_test_3d.npy")
-msks = np.load("msks_test_3d.npy")
 
-m = model.evaluate(imgs, msks, batch_size=args.bz, verbose=1)
+validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+                          "batch_size": 1,
+                          "n_in_channels": args.number_input_channels,
+                          "n_out_channels": 1,
+                          "train_test_split": args.train_test_split,
+                          "augment": False,
+                          "shuffle": False,
+                          "seed": args.random_seed}
+validation_generator = DataGenerator(False, args.data_path,
+                                     **validation_data_params)
+
+m = model.evaluate_generator(validation_generator, verbose=1,
+                             max_queue_size=10, workers=2,
+                             use_multiprocessing=True,)
 
 print("Test metrics")
 print("============")
@@ -78,39 +67,32 @@ except:
     os.mkdir(save_directory)
 
 print("Predicting masks")
-preds = model.predict(imgs, args.bz)
-np.save(os.path.join(save_directory, "msks_pred_3d.npy"), preds)
 
-"""
+file_idx = 0
 
-Save the predictions as Nifti files so that we can
-display them on a 3D viewer.
+for batch_idx in tqdm(range(validation_generator.num_batches),
+                      desc="Predicting on batch"):
 
-"""
-import nibabel as nib
-from tqdm import tqdm
+    imgs, msks = validation_generator.get_batch(batch_idx)
 
-def dice_score(pred, truth):
+    preds = model.predict_on_batch(imgs)
 
-    numerator = 2*np.sum(pred*truth)+1.0
-    denominator = np.sum(pred)+np.sum(truth)
+    # Save the predictions as Nifti files so that we can
+    # display them on a 3D viewer.
+    for idx in tqdm(range(preds.shape[0]), desc="Saving to Nifti file"):
 
-    return numerator/denominator
+        img = nib.Nifti1Image(imgs[idx,:,:,:,0], np.eye(4))
+        img.to_filename(os.path.join(save_directory,
+                        "img{}.nii.gz".format(file_idx)))
 
-print("Saving Nifti predictions to {}".format(save_directory))
-mean_dice = 0.0
+        msk = nib.Nifti1Image(msks[idx,:,:,:,0], np.eye(4))
+        msk.to_filename(os.path.join(save_directory,
+                        "msk{}.nii.gz".format(file_idx)))
 
-for idx in tqdm(range(preds.shape[0])):
+        pred = nib.Nifti1Image(preds[idx,:,:,:,0], np.eye(4))
+        pred.to_filename(os.path.join(save_directory,
+                         "pred{}.nii.gz".format(file_idx)))
 
-    img = nib.Nifti1Image(imgs[idx,:,:,:,0], np.eye(4))
-    img.to_filename(os.path.join(save_directory,"img{}.nii.gz".format(idx)))
+        file_idx += 1
 
-    msk = nib.Nifti1Image(msks[idx,:,:,:,0], np.eye(4))
-    msk.to_filename(os.path.join(save_directory,"msk{}.nii.gz".format(idx)))
-
-    pred = nib.Nifti1Image(preds[idx,:,:,:,0], np.eye(4))
-    pred.to_filename(os.path.join(save_directory,"pred{}.nii.gz".format(idx)))
-
-    mean_dice += dice_score(preds[idx,:,:,:,0], msks[idx,:,:,:,0]) / preds.shape[0]
-
-print("Mean Dice score = {:.4f}".format(mean_dice))
+print("Stopped script on {}".format(datetime.datetime.now()))
