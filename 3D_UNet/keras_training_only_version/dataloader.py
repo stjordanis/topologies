@@ -113,6 +113,15 @@ class DataGenerator(K.utils.Sequence):
         numFiles = experiment_data["numTraining"]
         idxList = np.arange(numFiles)  # List of file indices
 
+        self.imgFiles = {}
+        self.mskFiles = {}
+
+        for idx in idxList:
+            self.imgFiles[idx] = os.path.join(self.data_path,
+                      experiment_data["training"][idx]["image"])
+            self.mskFiles[idx] = os.path.join(self.data_path,
+                      experiment_data["training"][idx]["label"])
+
         np.random.seed(self.seed)
         randomIdx = np.random.random(numFiles)  # List of random numbers
         # Random number go from 0 to 1. So anything above
@@ -239,26 +248,13 @@ class DataGenerator(K.utils.Sequence):
         Change this to suit your dataset.
         """
 
-        json_filename = os.path.join(self.data_path, "dataset.json")
-        try:
-            with open(json_filename, "r") as fp:
-                experiment_data = json.load(fp)
-        except IOError as e:
-            print("File {} doesn't exist. It should be part of the "
-                  "Decathlon directory".format(json_filename))
-
-
         # Make empty arrays for the images and mask batches
         imgs = np.zeros((self.batch_size, *self.dim, self.n_in_channels))
         msks = np.zeros((self.batch_size, *self.dim, self.n_out_channels))
 
-        idx = 0
-        for file in list_IDs_temp:
+        for idx, fileIdx in enumerate(list_IDs_temp):
 
-            imgFile = os.path.join(self.data_path,
-                      experiment_data["training"][file]["image"])
-
-            img_temp = np.array(nib.load(imgFile).dataobj)
+            img_temp = np.array(nib.load(self.imgFiles[fileIdx]).dataobj)
 
             """
             "modality": {
@@ -273,10 +269,7 @@ class DataGenerator(K.utils.Sequence):
                 img = img_temp
 
             # Get mask data
-            mskFile = os.path.join(self.data_path,
-                                   experiment_data["training"][file]["label"])
-
-            msk = np.array(nib.load(mskFile).dataobj)
+            msk = np.array(nib.load(self.mskFiles[fileIdx]).dataobj)
 
             """
             "labels": {
@@ -300,7 +293,5 @@ class DataGenerator(K.utils.Sequence):
 
             imgs[idx, ] = img
             msks[idx, ] = msk
-
-            idx += 1
 
         return imgs, msks
