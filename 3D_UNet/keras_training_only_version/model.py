@@ -114,6 +114,7 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
     encodeE = ConvolutionBlock(poolD, "encodeE", fms*16, params)
     # END - Encoding path
 
+    # BEGIN - Decoding path
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2),
                                    interpolation="bilinear")(encodeE)
@@ -151,6 +152,8 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
         up = K.layers.Conv3DTranspose(name="transconvA", filters=fms,
                                       **params_trans)(decodeA)
     concatA = K.layers.concatenate([up, encodeA], axis=concat_axis, name="concatA")
+
+    # END - Decoding path
 
     convOut = ConvolutionBlock(concatA, "convOut", fms, params)
 
