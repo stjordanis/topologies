@@ -19,6 +19,8 @@
 from imports import *  # All of the common imports
 
 import os
+import ntpath
+
 import json
 
 import nibabel as nib
@@ -94,6 +96,8 @@ class DataGenerator(K.utils.Sequence):
         print("Tensor image size:   ", experiment_data["tensorImageSize"])
         print("Dataset release:     ", experiment_data["release"])
         print("Dataset reference:   ", experiment_data["reference"])
+        print("Input channels:      ", experiment_data["modality"])
+        print("Output labels:       ", experiment_data["labels"])
         print("Dataset license:     ", experiment_data["licence"])  # sic
         print("="*30)
         print("*"*30)
@@ -156,6 +160,22 @@ class DataGenerator(K.utils.Sequence):
         Public method to get one batch of data
         """
         return self.__getitem__(index)
+
+    def get_batch_fileIDs(self, index):
+        """
+        Get the original filenames for the batch at this index
+        """
+        indexes = np.sort(
+            self.indexes[index*self.batch_size:(index+1)*self.batch_size])
+        fileIDs = {}
+
+        for idx, fileIdx in enumerate(indexes):
+            name = self.imgFiles[fileIdx]
+            filename = ntpath.basename(name) # Strip all but filename
+            filename = os.path.splitext(filename)[0]
+            fileIDs[idx] = os.path.splitext(filename)[0]
+
+        return fileIDs
 
     def on_epoch_end(self):
         """

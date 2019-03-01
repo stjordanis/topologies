@@ -62,14 +62,22 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
     """
     3D U-Net
     """
-
-    def ActivationLayer(x, name):
+    def ConvolutionBlock(x, name, fms, params):
         """
-        The norm and activation layers
+        Convolutional block of layers
+        Per the original paper this is back to back 3D convs
+        with batch norm and then ReLU.
         """
-        y = K.layers.BatchNormalization()(x)
 
-        return K.layers.Activation("relu", name=name)(y)
+        x = K.layers.Conv3D(filters=fms, **params, name=name+"_conv0")(x)
+        x = K.layers.BatchNormalization(name=name+"_bn0")(x)
+        x = K.layers.Activation("relu", name=name+"_relu0")(x)
+
+        x = K.layers.Conv3D(filters=fms, **params, name=name+"_conv1")(x)
+        x = K.layers.BatchNormalization(name=name+"_bn1")(x)
+        x = K.layers.Activation("relu", name=name)(x)
+
+        return x
 
     if CHANNEL_LAST:
         input_shape = [None, None, None, n_cl_in]
@@ -90,47 +98,21 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
 
     fms = 16  #32 or 16 depending on your memory size
 
-    encodeA = K.layers.Conv3D(name="encodeAa", filters=fms, **params)(inputs)
-    encodeA = ActivationLayer(encodeA, "encode_Aa_activation")
-
-    encodeA = K.layers.Conv3D(name="encodeAb", filters=fms, **params)(encodeA)
-    encodeA = ActivationLayer(encodeA, "encode_Ab_activation")
-
+    # BEGIN - Encoding path
+    encodeA = ConvolutionBlock(inputs, "encodeA", fms, params)
     poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(encodeA)
 
-    encodeB = K.layers.Conv3D(name="encodeBa", filters=fms*2, **params)(poolA)
-    encodeB = ActivationLayer(encodeB, "encode_Ba_activation")
-
-    encodeB = K.layers.Conv3D(name="encodeBb", filters=fms*2, **params)(encodeB)
-    encodeB = ActivationLayer(encodeB, "encode_Bb_activation")
-
+    encodeB = ConvolutionBlock(poolA, "encodeB", fms*2, params)
     poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(encodeB)
 
-    encodeC = K.layers.Conv3D(name="encodeCa", filters=fms*4, **params)(poolB)
-    encodeC = ActivationLayer(encodeC, "encode_Ca_activation")
-
-    encodeC = K.layers.SpatialDropout3D(dropout,
-                                        data_format=data_format)(encodeC)
-    encodeC = K.layers.Conv3D(name="encodeCb", filters=fms*4, **params)(encodeC)
-    encodeC = ActivationLayer(encodeC, "encode_Cb_activation")
-
+    encodeC = ConvolutionBlock(poolB, "encodeC", fms*4, params)
     poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(encodeC)
 
-    encodeD = K.layers.Conv3D(name="encodeDa", filters=fms*8, **params)(poolC)
-    encodeD = ActivationLayer(encodeD, "encode_Da_activation")
-    encodeD = K.layers.SpatialDropout3D(dropout,
-                                        data_format=data_format)(encodeD)
-
-    encodeD = K.layers.Conv3D(name="encodeDb", filters=fms*8, **params)(encodeD)
-    encodeD = ActivationLayer(encodeD, "encode_Db_activation")
-
+    encodeD = ConvolutionBlock(poolC, "encodeD", fms*8, params)
     poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(encodeD)
 
-    encodeE = K.layers.Conv3D(name="encodeEa", filters=fms*16, **params)(poolD)
-    encodeE = ActivationLayer(encodeE, "encode_Ea_activation")
-
-    encodeE = K.layers.Conv3D(name="encodeEb", filters=fms*16, **params)(encodeE)
-    encodeE = ActivationLayer(encodeE, "encode_Eb_activation")
+    encodeE = ConvolutionBlock(poolD, "encodeE", fms*16, params)
+    # END - Encoding path
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2),
@@ -140,11 +122,7 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
                                       **params_trans)(encodeE)
     concatD = K.layers.concatenate([up, encodeD], axis=concat_axis, name="concatD")
 
-    decodeC = K.layers.Conv3D(name="decodeCa", filters=fms*8, **params)(concatD)
-    decodeC = ActivationLayer(decodeC, "decode_Ca_activation")
-
-    decodeC = K.layers.Conv3D(name="decodeCb", filters=fms*8, **params)(decodeC)
-    decodeC = ActivationLayer(decodeC, "decode_Cb_activation")
+    decodeC = ConvolutionBlock(concatD, "decodeC", fms*8, params)
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2),
@@ -154,11 +132,7 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
                                       **params_trans)(decodeC)
     concatC = K.layers.concatenate([up, encodeC], axis=concat_axis, name="concatC")
 
-    decodeB = K.layers.Conv3D(name="decodeBa", filters=fms*4, **params)(concatC)
-    decodeB = ActivationLayer(decodeB, "decode_Ba_activation")
-
-    decodeB = K.layers.Conv3D(name="decodeBb", filters=fms*4, **params)(decodeB)
-    decodeB = ActivationLayer(decodeB, "decode_Bb_activation")
+    decodeB = ConvolutionBlock(concatC, "decodeB", fms*4, params)
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2),
@@ -168,11 +142,7 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
                                       **params_trans)(decodeB)
     concatB = K.layers.concatenate([up, encodeB], axis=concat_axis, name="concatB")
 
-    decodeA = K.layers.Conv3D(name="decodeAa", filters=fms*2, **params)(concatB)
-    decodeA = ActivationLayer(decodeA, "decode_Aa_activation")
-
-    decodeA = K.layers.Conv3D(name="decodeAb", filters=fms*2, **params)(decodeA)
-    decodeA = ActivationLayer(decodeA, "decode_Ab_activation")
+    decodeA = ConvolutionBlock(concatB, "decodeA", fms*2, params)
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2),
@@ -182,11 +152,7 @@ def unet_3d(use_upsampling=False, learning_rate=0.001,
                                       **params_trans)(decodeA)
     concatA = K.layers.concatenate([up, encodeA], axis=concat_axis, name="concatA")
 
-    convOut = K.layers.Conv3D(name="convOuta", filters=fms, **params)(concatA)
-    convOut = ActivationLayer(convOut, "convOuta_activation")
-
-    convOut = K.layers.Conv3D(name="convOutb", filters=fms, **params)(convOut)
-    convOut = ActivationLayer(convOut, "convOutb_activation")
+    convOut = ConvolutionBlock(concatA, "convOut", fms, params)
 
     prediction = K.layers.Conv3D(name="PredictionMask",
                                  filters=n_cl_out, kernel_size=(1, 1, 1),

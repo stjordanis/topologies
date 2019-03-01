@@ -1,14 +1,15 @@
-import numpy as np
+from imports import *
+
 import datetime
 from tqdm import tqdm
 
 from argparser import args
 
-import tensorflow as tf
 from model import *
 
 from dataloader import DataGenerator
 
+import os
 import nibabel as nib
 
 print("Started script on {}".format(datetime.datetime.now()))
@@ -24,8 +25,6 @@ config = tf.ConfigProto(
     intra_op_parallelism_threads=args.intraop_threads)
 
 sess = tf.Session(config=config)
-
-import keras as K
 
 K.backend.set_session(sess)
 
@@ -68,12 +67,11 @@ except:
 
 print("Predicting masks")
 
-file_idx = 0
-
 for batch_idx in tqdm(range(validation_generator.num_batches),
                       desc="Predicting on batch"):
 
     imgs, msks = validation_generator.get_batch(batch_idx)
+    fileIDs = validation_generator.get_batch_fileIDs(batch_idx)
 
     preds = model.predict_on_batch(imgs)
 
@@ -83,16 +81,17 @@ for batch_idx in tqdm(range(validation_generator.num_batches),
 
         img = nib.Nifti1Image(imgs[idx,:,:,:,0], np.eye(4))
         img.to_filename(os.path.join(save_directory,
-                        "img{}.nii.gz".format(file_idx)))
+                        "{}_img.nii.gz".format(fileIDs[idx])))
 
         msk = nib.Nifti1Image(msks[idx,:,:,:,0], np.eye(4))
         msk.to_filename(os.path.join(save_directory,
-                        "msk{}.nii.gz".format(file_idx)))
+                        "{}_msk.nii.gz".format(fileIDs[idx])))
 
         pred = nib.Nifti1Image(preds[idx,:,:,:,0], np.eye(4))
         pred.to_filename(os.path.join(save_directory,
-                         "pred{}.nii.gz".format(file_idx)))
+                         "{}_pred.nii.gz".format(fileIDs[idx])))
 
-        file_idx += 1
-
+print("Model predictions saved to directory: {}".format(save_directory))
+print("You can use a viewer like Mango (http://ric.uthscsa.edu/mango/) "
+      "to display the prediction Nifti files")
 print("Stopped script on {}".format(datetime.datetime.now()))
