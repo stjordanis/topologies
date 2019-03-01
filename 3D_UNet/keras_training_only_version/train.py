@@ -132,15 +132,13 @@ workers, use_multiprocessing: Generates multiple generator instances.
 num_data_loaders is defined in argparser.py
 """
 
-num_prefetched_batches = 3
-
 model.fit_generator(training_generator,
                     epochs=args.epochs, verbose=1,
                     validation_data=validation_generator,
                     callbacks=callbacks,
-                    max_queue_size=num_prefetched_batches,
+                    max_queue_size=args.num_prefetched_batches,
                     workers=args.num_data_loaders,
-                    use_multiprocessing=False) #True)
+                    use_multiprocessing=False)  # True seems to cause fork issue
 
 stop_time = datetime.datetime.now()
 print("Started script on {}".format(start_time))

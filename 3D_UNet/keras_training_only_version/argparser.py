@@ -19,7 +19,8 @@ import os
 import argparse
 import psutil
 
-num_data_loaders = 2
+num_data_loaders = 4
+num_prefetched_batches = 4
 
 parser = argparse.ArgumentParser(
     description="Train 3D U-Net model", add_help=True)
@@ -81,5 +82,6 @@ parser.add_argument("--random_seed",
 args = parser.parse_args()
 
 args.num_data_loaders = num_data_loaders
+args.num_prefetched_batches = num_prefetched_batches
 
 print("Args = {}".format(args))
