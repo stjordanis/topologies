@@ -27,14 +27,9 @@ class DataGenerator(K.utils.Sequence):
     """
     Generates data for Keras/TensorFlow
 
-    This uses the Keras Sequence which is better data pipeline.
+    This uses the Keras Sequence which is a better data pipeline.
     It will allow for multiple data generator processes and
     batch pre-fetching.
-    The main input the dataloader is a list of filenames containing
-    the images (MRIs) to load. In the case of BraTS, the images and masks
-    have the same name but a different suffix. For example, the FLAIR image
-    could be "MRI1234_flair.nii.gz" and the corresponding mask would be
-    "MRI1234_seg.nii.gz".
 
     If you have a different type of dataset, you'll just need to
     change the loading code in self.__data_generation to return
@@ -82,8 +77,6 @@ class DataGenerator(K.utils.Sequence):
         Get list of the files from the BraTS raw data
         Split into training and testing sets.
         """
-        fileList = []
-
         json_filename = os.path.join(self.data_path, "dataset.json")
 
         try:
