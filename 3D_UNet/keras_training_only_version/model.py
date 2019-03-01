@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # ----------------------------------------------------------------------------
-# Copyright 2018 Intel
+# Copyright 2019 Intel
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,18 +15,12 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-import os.path
-import numpy as np
-
-import tensorflow as tf
-
-import keras as K
-
+from imports import *  # All of the common imports
 
 def dice_coef(y_true, y_pred, axis=(1, 2, 3), smooth=1.):
     """
     Sorenson (Soft) Dice
-    2 * |TP| / |T|*|P|
+    \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
     where T is ground truth mask and P is the prediction mask
     """
     intersection = tf.reduce_sum(y_true * y_pred, axis=axis)
@@ -63,23 +57,27 @@ def combined_dice_ce_loss(target, prediction, axis=(1, 2, 3), smooth=1., weight=
         (1-weight)*K.losses.binary_crossentropy(target, prediction)
 
 
-CHANNEL_LAST = True
-if CHANNEL_LAST:
-    concat_axis = -1
-    data_format = "channels_last"
-
-else:
-    concat_axis = 1
-    data_format = "channels_first"
-
-
-def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
+def unet_3d(use_upsampling=False, learning_rate=0.001,
             n_cl_in=1, n_cl_out=1, dropout=0.2, print_summary=False):
     """
     3D U-Net
     """
 
-    inputs = K.layers.Input(shape=input_shape, name="MRImages")
+    def ActivationLayer(x, name):
+        """
+        The norm and activation layers
+        """
+        y = K.layers.BatchNormalization()(x)
+
+        return K.layers.Activation("relu", name=name)(y)
+
+    if CHANNEL_LAST:
+        input_shape = [None, None, None, n_cl_in]
+    else:
+        input_shape = [n_cl_in, None, None, None]
+
+    inputs = K.layers.Input(shape=input_shape,
+                            name="MRImages")
 
     params = dict(kernel_size=(3, 3, 3), activation=None,
                   padding="same", data_format=data_format,
@@ -93,47 +91,46 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     fms = 16  #32 or 16 depending on your memory size
 
     encodeA = K.layers.Conv3D(name="encodeAa", filters=fms, **params)(inputs)
-    encodeA = K.layers.BatchNormalization()(encodeA)
-    encodeA = K.layers.Activation("relu")(encodeA)
+    encodeA = ActivationLayer(encodeA, "encode_Aa_activation")
+
     encodeA = K.layers.Conv3D(name="encodeAb", filters=fms, **params)(encodeA)
-    encodeA = K.layers.BatchNormalization()(encodeA)
-    encodeA = K.layers.Activation("relu")(encodeA)
+    encodeA = ActivationLayer(encodeA, "encode_Ab_activation")
+
     poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(encodeA)
 
     encodeB = K.layers.Conv3D(name="encodeBa", filters=fms*2, **params)(poolA)
-    encodeB = K.layers.BatchNormalization()(encodeB)
-    encodeB = K.layers.Activation("relu")(encodeB)
+    encodeB = ActivationLayer(encodeB, "encode_Ba_activation")
+
     encodeB = K.layers.Conv3D(name="encodeBb", filters=fms*2, **params)(encodeB)
+    encodeB = ActivationLayer(encodeB, "encode_Bb_activation")
+
     poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(encodeB)
 
     encodeC = K.layers.Conv3D(name="encodeCa", filters=fms*4, **params)(poolB)
-    encodeC = K.layers.BatchNormalization()(encodeC)
-    encodeC = K.layers.Activation("relu")(encodeC)
+    encodeC = ActivationLayer(encodeC, "encode_Ca_activation")
+
     encodeC = K.layers.SpatialDropout3D(dropout,
                                         data_format=data_format)(encodeC)
     encodeC = K.layers.Conv3D(name="encodeCb", filters=fms*4, **params)(encodeC)
-    encodeC = K.layers.BatchNormalization()(encodeC)
-    encodeC = K.layers.Activation("relu")(encodeC)
+    encodeC = ActivationLayer(encodeC, "encode_Cb_activation")
 
     poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(encodeC)
 
     encodeD = K.layers.Conv3D(name="encodeDa", filters=fms*8, **params)(poolC)
-    encodeD = K.layers.BatchNormalization()(encodeD)
-    encodeD = K.layers.Activation("relu")(encodeD)
+    encodeD = ActivationLayer(encodeD, "encode_Da_activation")
     encodeD = K.layers.SpatialDropout3D(dropout,
                                         data_format=data_format)(encodeD)
+
     encodeD = K.layers.Conv3D(name="encodeDb", filters=fms*8, **params)(encodeD)
-    encodeD = K.layers.BatchNormalization()(encodeD)
-    encodeD = K.layers.Activation("relu")(encodeD)
+    encodeD = ActivationLayer(encodeD, "encode_Db_activation")
 
     poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(encodeD)
 
     encodeE = K.layers.Conv3D(name="encodeEa", filters=fms*16, **params)(poolD)
-    encodeE = K.layers.BatchNormalization()(encodeE)
-    encodeE = K.layers.Activation("relu")(encodeE)
+    encodeE = ActivationLayer(encodeE, "encode_Ea_activation")
+
     encodeE = K.layers.Conv3D(name="encodeEb", filters=fms*16, **params)(encodeE)
-    encodeE = K.layers.BatchNormalization()(encodeE)
-    encodeE = K.layers.Activation("relu")(encodeE)
+    encodeE = ActivationLayer(encodeE, "encode_Eb_activation")
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2),
@@ -144,11 +141,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     concatD = K.layers.concatenate([up, encodeD], axis=concat_axis, name="concatD")
 
     decodeC = K.layers.Conv3D(name="decodeCa", filters=fms*8, **params)(concatD)
-    decodeC = K.layers.BatchNormalization()(decodeC)
-    decodeC = K.layers.Activation("relu")(decodeC)
+    decodeC = ActivationLayer(decodeC, "decode_Ca_activation")
+
     decodeC = K.layers.Conv3D(name="decodeCb", filters=fms*8, **params)(decodeC)
-    decodeC = K.layers.BatchNormalization()(decodeC)
-    decodeC = K.layers.Activation("relu")(decodeC)
+    decodeC = ActivationLayer(decodeC, "decode_Cb_activation")
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2),
@@ -159,11 +155,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     concatC = K.layers.concatenate([up, encodeC], axis=concat_axis, name="concatC")
 
     decodeB = K.layers.Conv3D(name="decodeBa", filters=fms*4, **params)(concatC)
-    decodeB = K.layers.BatchNormalization()(decodeB)
-    decodeB = K.layers.Activation("relu")(decodeB)
+    decodeB = ActivationLayer(decodeB, "decode_Ba_activation")
+
     decodeB = K.layers.Conv3D(name="decodeBb", filters=fms*4, **params)(decodeB)
-    decodeB = K.layers.BatchNormalization()(decodeB)
-    decodeB = K.layers.Activation("relu")(decodeB)
+    decodeB = ActivationLayer(decodeB, "decode_Bb_activation")
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2),
@@ -174,11 +169,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     concatB = K.layers.concatenate([up, encodeB], axis=concat_axis, name="concatB")
 
     decodeA = K.layers.Conv3D(name="decodeAa", filters=fms*2, **params)(concatB)
-    decodeA = K.layers.BatchNormalization()(decodeA)
-    decodeA = K.layers.Activation("relu")(decodeA)
+    decodeA = ActivationLayer(decodeA, "decode_Aa_activation")
+
     decodeA = K.layers.Conv3D(name="decodeAb", filters=fms*2, **params)(decodeA)
-    decodeA = K.layers.BatchNormalization()(decodeA)
-    decodeA = K.layers.Activation("relu")(decodeA)
+    decodeA = ActivationLayer(decodeA, "decode_Ab_activation")
 
     if use_upsampling:
         up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2),
@@ -189,11 +183,10 @@ def unet_3d(input_shape, use_upsampling=False, learning_rate=0.001,
     concatA = K.layers.concatenate([up, encodeA], axis=concat_axis, name="concatA")
 
     convOut = K.layers.Conv3D(name="convOuta", filters=fms, **params)(concatA)
-    convOut = K.layers.BatchNormalization()(convOut)
-    convOut = K.layers.Activation("relu")(convOut)
+    convOut = ActivationLayer(convOut, "convOuta_activation")
+
     convOut = K.layers.Conv3D(name="convOutb", filters=fms, **params)(convOut)
-    convOut = K.layers.BatchNormalization()(convOut)
-    convOut = K.layers.Activation("relu")(convOut)
+    convOut = ActivationLayer(convOut, "convOutb_activation")
 
     prediction = K.layers.Conv3D(name="PredictionMask",
                                  filters=n_cl_out, kernel_size=(1, 1, 1),

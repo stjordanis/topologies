@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # ----------------------------------------------------------------------------
-# Copyright 2018 Intel
+# Copyright 2019 Intel
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,11 +15,11 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-import numpy as np
+from imports import *  # All of the common imports
 
 import os
 import datetime
-import tensorflow as tf
+
 from model import *
 
 from dataloader import DataGenerator
@@ -34,14 +34,25 @@ os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
 os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
 os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 
-if hvd.rank() != 0:
-    args.saved_model = "./worker{}/3d_unet_decathlon.hdf5".format(hvd.rank())
-
+if (hvd.rank() == 0): # Only print on worker 0
+    print_summary = args.print_model
+    verbose = 1
     os.system("lscpu")
     os.system("uname -a")
     print("TensorFlow version: {}".format(tf.__version__))
-
+    print("Intel MKL-DNN is enabled = {}".format(tf.pywrap_tensorflow.IsMklEnabled()))
     print("Keras API version: {}".format(K.__version__))
+
+else:  # Don't print on workers > 0
+    print_summary = 0
+    verbose = 0
+    # Horovod needs to have every worker do the same amount of work.
+    # Otherwise it will complain at the end of the epoch when
+    # worker 0 takes more time than the others to do validation,
+    # logging, and model checkpointing.
+    # We'll save the worker logs and models separately but only
+    # use the logs/saved model from worker 0.
+    args.saved_model = "./worker{}/3d_unet_decathlon.hdf5".format(hvd.rank())
 
 # Optimize CPU threads for TensorFlow
 config = tf.ConfigProto(
@@ -50,24 +61,10 @@ config = tf.ConfigProto(
 
 sess = tf.Session(config=config)
 
-import keras as K
-
 K.backend.set_session(sess)
 
-input_shape = [args.patch_dim, args.patch_dim, args.patch_dim,
-               args.number_input_channels]
 
-
-if (hvd.rank() == 0):
-    print_summary = args.print_model
-    verbose = 1
-else:
-    print_summary = args.print_model
-    verbose = 0
-
-
-model, opt = unet_3d(input_shape=input_shape,
-                use_upsampling=args.use_upsampling,
+model, opt = unet_3d(use_upsampling=args.use_upsampling,
                 n_cl_in=args.number_input_channels,
                 learning_rate=args.lr*hvd.size(),
                 n_cl_out=1,  # single channel (greyscale)
@@ -177,6 +174,7 @@ validation_generator = DataGenerator(False, args.data_path,
                                      **validation_data_params)
 
 # Fit the model
+# Do at least 3 steps for training and validation
 steps_per_epoch = max(3, training_generator.get_length()//(args.bz*hvd.size()))
 validation_steps = max(3,3*training_generator.get_length()//(args.bz*hvd.size()))
 
@@ -215,5 +213,5 @@ if hvd.rank() == 0:
     stop_time = datetime.datetime.now()
     print("Started script on {}".format(start_time))
     print("Stopped script on {}".format(stop_time))
-    print("\n\nTotal time = {:,.3f} seconds".format(
+    print("\nTotal time = {:,.3f} seconds".format(
         stop_time - start_time))

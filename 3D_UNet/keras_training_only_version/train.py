@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # ----------------------------------------------------------------------------
-# Copyright 2018 Intel
+# Copyright 2019 Intel
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,16 +15,13 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-import keras as K
-import numpy as np
+from imports import *  # All of the common imports
 
 import os
 import datetime
-import tensorflow as tf
+
 from model import *
-
 from dataloader import DataGenerator
-
 from argparser import args
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
@@ -51,12 +48,9 @@ sess = tf.Session(config=config)
 
 K.backend.set_session(sess)
 
-input_shape = [args.patch_dim, args.patch_dim, args.patch_dim, args.number_input_channels]
-
 print_summary = args.print_model
 
-model, opt = unet_3d(input_shape=input_shape,
-                use_upsampling=args.use_upsampling,
+model, opt = unet_3d(use_upsampling=args.use_upsampling,
                 learning_rate=args.lr,
                 n_cl_in=args.number_input_channels,
                 n_cl_out=1,  # single channel (greyscale)
@@ -151,4 +145,4 @@ model.fit_generator(training_generator,
 stop_time = datetime.datetime.now()
 print("Started script on {}".format(start_time))
 print("Stopped script on {}".format(stop_time))
-print("\n\nTotal time for training model = {}".format(stop_time - start_time))
+print("\nTotal time for training model = {}".format(stop_time - start_time))
