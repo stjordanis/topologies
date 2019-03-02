@@ -88,6 +88,10 @@ keras.backend.set_learning_phase(0)
 signature = tf.saved_model.signature_def_utils.predict_signature_def(
     inputs={'input': model.input}, outputs={'output': model.output})
 
+import shutil
+
+shutil.rmtree(args.output_directory, ignore_errors=True)
+
 print("Saving the model to directory {}".format(args.output_directory))
 
 builder = tf.saved_model.builder.SavedModelBuilder(args.output_directory)
