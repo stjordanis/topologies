@@ -68,7 +68,7 @@ parser.add_argument("--use_upsampling",
                     action="store_true",
                     default=False,
                     help="Use upsampling instead of transposed convolution")
-datapath = "../../../data/decathlon/Task01_BrainTumour/"
+datapath = "./data/decathlon/Task01_BrainTumour/"
 parser.add_argument("--data_path",
                     default=datapath,
                     help="Root directory for Medical Decathlon dataset")
