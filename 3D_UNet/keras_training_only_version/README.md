@@ -22,12 +22,12 @@ e.g.
 ```python evaluate_model.py --data_path ../../../data/decathlon/Task01_BrainTumour/ --saved_model 3d_unet_decathlon_dice8602.hdf5```
 replacing `--data_path` and `--saved_model` with your local paths/files.
 
-There are many programs that will display Nifti 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
+There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
 The red overlay is the predictions from the model. The blue overlay is the ground truth masks. Any purple voxels are true positives.
 
- ![pred152](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/pred152.png)
+ ![pred152](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_152.png)
 
- ![pred426](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/pred426.png)
+ ![pred426](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_426.png)
 
 REFERENCES:
 1. Menze BH, Jakab A, Bauer S, Kalpathy-Cramer J, Farahani K, Kirby J, Burren Y, Porz N, Slotboom J, Wiest R, Lanczi L, Gerstner E, Weber MA, Arbel T, Avants BB, Ayache N, Buendia P, Collins DL, Cordier N, Corso JJ, Criminisi A, Das T, Delingette H, Demiralp Γ, Durst CR, Dojat M, Doyle S, Festa J, Forbes F, Geremia E, Glocker B, Golland P, Guo X, Hamamci A, Iftekharuddin KM, Jena R, John NM, Konukoglu E, Lashkari D, Mariz JA, Meier R, Pereira S, Precup D, Price SJ, Raviv TR, Reza SM, Ryan M, Sarikaya D, Schwartz L, Shin HC, Shotton J, Silva CA, Sousa N, Subbanna NK, Szekely G, Taylor TJ, Thomas OM, Tustison NJ, Unal G, Vasseur F, Wintermark M, Ye DH, Zhao L, Zhao B, Zikic D, Prastawa M, Reyes M, Van Leemput K. "The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS)", IEEE Transactions on Medical Imaging 34(10), 1993-2024 (2015) DOI: 10.1109/TMI.2014.2377694
