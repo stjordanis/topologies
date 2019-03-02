@@ -8,7 +8,7 @@ Trains a 3D U-Net on the brain tumor segmentation ([BraTS](https://www.med.upenn
 Steps to train a new model:
 
 1. Go to the [Medical Segmentation Decathlon](http://medicaldecathlon.com) website and download the [BraTS subset](https://drive.google.com/file/d/1A2IU8Sgea1h3fYLpYtFb2v7NYdMjvEhU/view?usp=sharing). The dataset has the Creative Commons Attribution-ShareAlike 4.0 International [license](https://creativecommons.org/licenses/by-sa/4.0/).
-2. Untar the "Task01_BrainTumour.tar" file ```tar -xvf Task01_BrainTumour.tar```
+2. Untar the "Task01_BrainTumour.tar" file:   ```tar -xvf Task01_BrainTumour.tar```
 3. Create a Conda environment with TensorFlow. Command: 
 ```
 conda create -c anaconda -n decathlon pip python=3.6 tensorflow keras tqdm h5py psutil
@@ -40,6 +40,7 @@ where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the 
 e.g. 
 ```python evaluate_model.py --data_path ../../data/decathlon/Task01_BrainTumour/ --saved_model 3d_unet_decathlon_dice8621.hdf5```
 replacing `--data_path` and `--saved_model` with your local paths/files.
+4. The inference script will print the average [Dice coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) of the validation set. It will also save the predictions, MRI images, and ground truth masks for each validation sample into the `predictions_directory` sub-folder. 
 
 There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
 The red overlay is the predictions from the model. The blue overlay is the ground truth masks. Any purple voxels are true positives.
