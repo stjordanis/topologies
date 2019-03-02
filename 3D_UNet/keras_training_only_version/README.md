@@ -32,7 +32,7 @@ python train.py --data_path $DECATHLON_ROOT_DIRECTORY
 ```
 where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the Decathlon dataset.
 
-NOTE: The default settings take a [Height, Width, Depth] = [144,144,144] crop of the original image and mask using 8 images/masks per training batch. This requires several dozen gigabytes of memory to train the model. If you don't have enough memory or are getting out of memory (OOM) errors, you can pass `--patch_dim=64` to the `train.py` which will use a smaller ([64,64,64]) crop. You can also consider smaller batch sizes (e.g. `--bz=4` for a batch size of 4).
+NOTE: The default settings take a [Height, Width, Depth] = [144, 144, 144] crop of the original image and mask using 8 images/masks per training batch. This requires several dozen gigabytes of memory to train the model. If you don't have enough memory or are getting out of memory (OOM) errors, you can pass `--patch_dim=64` to the `train.py` which will use a smaller ([64,64,64]) crop. You can also consider smaller batch sizes (e.g. `--bz=4` for a batch size of 4).
 
 ### Steps to evaluate a pre-trained 3D U-Net model.
 
@@ -45,7 +45,8 @@ NOTE: The default settings take a [Height, Width, Depth] = [144,144,144] crop of
 python evaluate_model.py --data_path $DECATHLON_ROOT_DIRECTORY --saved_model $SAVED_HDF5_FILE
 ```
 where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the Decathlon dataset and $SAVE_HDF5_FILE is the name of the pre-trained Keras model.
-e.g. 
+
+For example,
 ```
 python evaluate_model.py --data_path ../../data/decathlon/Task01_BrainTumour/ --saved_model 3d_unet_decathlon_dice8621.hdf5
 ``` 
