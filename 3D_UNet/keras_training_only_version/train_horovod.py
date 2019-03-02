@@ -197,15 +197,13 @@ workers, use_multiprocessing: Generates multiple generator instances.
 num_data_loaders is defined in argparser.py
 """
 
-num_prefetched_batches = 3
-
 model.fit_generator(training_generator,
                     steps_per_epoch=steps_per_epoch,
                     epochs=args.epochs, verbose=verbose,
                     validation_data=validation_generator,
                     #validation_steps=validation_steps,
                     callbacks=callbacks,
-                    max_queue_size=num_prefetched_batches,
+                    max_queue_size=args.num_prefetched_batches,
                     workers=args.num_data_loaders,
                     use_multiprocessing=False) #True)
 
