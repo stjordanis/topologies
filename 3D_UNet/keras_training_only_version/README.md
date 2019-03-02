@@ -29,6 +29,7 @@ python train.py --data_path $DECATHLON_ROOT_DIRECTORY
 ```
 where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the Decathlon dataset.
 
+NOTE: The default settings take a H,W,D = [144,144,144] crop of the original image and mask and 8 images/masks per training batch. This requires several dozen gigabytes of memory to train the model. If you don't have enough memory or are getting out of memory (OOM) errors, you can pass `--patch_dim=64` to the `train.py` which will use a smaller ([64,64,64]) crop. You can also consider smaller batch sizes (e.g. `--bz=4` for a batch size of 4).
 
 ### Steps to evaluate a pre-trained 3D U-Net model.
 
@@ -78,10 +79,10 @@ python ${CONDA_PREFIX}/lib/python3.6/site-packages/tensorflow/python/tools/freez
 
 4. Use the [Intel OpenVINO model optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert the frozen model to OpenVINO's intermediate represenation (IR) model:
 ```
-python ${INTEL_CVSDK_DIR}/deployment_tools/model_optimizer/mo_tf.py --input_model frozen_model/saved_model_frozen.pb --input_shape=[1,144,144,144,1] --data_type FP32  --output_dir openvinomodels/FP32  --model_name 3d_unet_decathlon
+python ${INTEL_CVSDK_DIR}/deployment_tools/model_optimizer/mo_tf.py --input_model frozen_model/saved_model_frozen.pb --input_shape=[1,144,144,144,1] --data_type FP32  --output_dir openvino_models/FP32  --model_name 3d_unet_decathlon
 ```
 
-5. The saved model should be located in the `openvinomodels/FP32` subfolder.
+5. The saved model should be located in the `openvino_models/FP32` subfolder.
 
 6. A sample inference script for the OpenVINO version of the model can be found in the `openvino_models` subfolder.
 
