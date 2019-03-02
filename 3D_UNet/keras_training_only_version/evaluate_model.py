@@ -50,7 +50,7 @@ validation_generator = DataGenerator(False, args.data_path,
 
 m = model.evaluate_generator(validation_generator, verbose=1,
                              max_queue_size=10, workers=2,
-                             use_multiprocessing=True,)
+                             use_multiprocessing=True)
 
 print("Test metrics")
 print("============")
@@ -91,7 +91,7 @@ for batch_idx in tqdm(range(validation_generator.num_batches),
         pred.to_filename(os.path.join(save_directory,
                          "{}_pred.nii.gz".format(fileIDs[idx])))
 
-print("Model predictions saved to directory: {}".format(save_directory))
+print("\n\n\nModel predictions saved to directory: {}".format(save_directory))
 print("You can use a viewer like Mango (http://ric.uthscsa.edu/mango/) "
       "to display the prediction Nifti files")
 print("Stopped script on {}".format(datetime.datetime.now()))
