@@ -26,7 +26,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_filename",
                     help="Name of saved Keras model (e.g. model.h5)",
-                    default=os.path.join("saved_model", "./saved_model/3d_unet_decathlon.hdf5"))
+                    default=os.path.join("saved_model", "3d_unet_decathlon.hdf5"))
 parser.add_argument("--output_directory",
                     help="Directory where to save the TensorFlow Checkpoint",
                     default="saved_3dunet_model_checkpoint")
