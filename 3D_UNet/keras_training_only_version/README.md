@@ -3,9 +3,9 @@
 ![pred152_3D](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_152_img3D.gif
 "BRATS image #152:  Purple voxels indicate a perfect prediction by the model. Red are false positives. Blue are false negatives").
 
-Trains a 3D U-Net on the brain tumor segmentation ([BraTS](https://www.med.upenn.edu/sbia/brats2017.html)) subset of the [Medical Segmentation Decathlon](http://medicaldecathlon.com/) dataset. This model can achieve Dice coefficient of > 0.85.
+## Trains a 3D U-Net on the brain tumor segmentation ([BraTS](https://www.med.upenn.edu/sbia/brats2017.html)) subset of the [Medical Segmentation Decathlon](http://medicaldecathlon.com/) dataset. This model can achieve Dice coefficient of > 0.85.
 
-Steps to train a new model:
+### Steps to train a new model:
 
 1. Go to the [Medical Segmentation Decathlon](http://medicaldecathlon.com) website and download the [BraTS subset](https://drive.google.com/file/d/1A2IU8Sgea1h3fYLpYtFb2v7NYdMjvEhU/view?usp=sharing). The dataset has the Creative Commons Attribution-ShareAlike 4.0 International [license](https://creativecommons.org/licenses/by-sa/4.0/).
 2. Untar the "Task01_BrainTumour.tar" file:   ```tar -xvf Task01_BrainTumour.tar```
@@ -28,7 +28,7 @@ python train.py --data_path $DECATHLON_ROOT_DIRECTORY
 where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the Decathlon dataset.
 
 
-Steps to evaluate a pre-trained 3D U-Net model.
+### Steps to evaluate a pre-trained 3D U-Net model.
 
 1. Download the [Medical Decathlon dataset](http://medicaldecathlon.com/). Specifically, this model was trained on the brain tumor segmentation (BraTS 2016 & 2017) portion of the dataset ([Task 1](https://drive.google.com/open?id=1A2IU8Sgea1h3fYLpYtFb2v7NYdMjvEhU)).
 
@@ -45,7 +45,7 @@ with your local paths/files.
 
 4. The inference script will print the average [Dice coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) of the validation set. It will also save the predictions, MRI images, and ground truth masks for each validation sample into the `predictions_directory` sub-folder. 
 
-There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
+### There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
 The red overlay is the predictions from the model. The blue overlay is the ground truth masks. Any purple voxels are true positives.
 
 ![pred195](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_195_img.gif "BRATS image #195:  Purple voxels indicate a perfect prediction by the model. Red are false positives. Blue are false negatives")
