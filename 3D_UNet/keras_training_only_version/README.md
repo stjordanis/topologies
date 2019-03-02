@@ -57,6 +57,31 @@ There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3
 
  ![pred426](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_426.png "BRATS image #426:  Purple voxels indicate a perfect prediction by the model. Red are false positives. Blue are false negatives")
 
+## Extra Credit - [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit) model conversion
+
+To convert the trained model to [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit):
+
+1. Download and install [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit). Start the Intel OpenVINO environment: ```source /opt/intel/computer_vision_sdk/bin/setupvars.sh```
+
+2. Convert the Keras model to the TensorFlow serving protobuf format:
+```
+python convert_keras_to_tensorflow_serving_model.py
+```
+
+3. Use TensorFlow to freeze the TensorFlow serving protobuf model:
+```
+python ${CONDA_PREFIX}/lib/python3.6/site-packages/tensorflow/python/tools/freeze_graph.py --input_saved_model_dir saved_3dunet_model_protobuf --output_node_names PredictionMask/Sigmoid --output_graph frozen_model/saved_model_frozen.pb
+```
+
+4. Use the [Intel OpenVINO model optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert the frozen model to OpenVINO's intermediate represenation (IR) model:
+```
+python ${INTEL_CVSDK_DIR}/deployment_tools/model_optimizer/mo_tf.py --input_model frozen_model/saved_model_frozen.pb --input_shape=[1,144,144,144,1] --data_type FP32  --output_dir openvinomodels/FP32  --model_name 3d_unet_decathlon
+```
+
+5. The saved model should be located in the `openvinomodels/FP32` subfolder.
+
+6. A sample inference script for the OpenVINO version of the model can be found in the `openvino_models` subfolder.
+
 REFERENCES:
 1. Menze BH, Jakab A, Bauer S, Kalpathy-Cramer J, Farahani K, Kirby J, Burren Y, Porz N, Slotboom J, Wiest R, Lanczi L, Gerstner E, Weber MA, Arbel T, Avants BB, Ayache N, Buendia P, Collins DL, Cordier N, Corso JJ, Criminisi A, Das T, Delingette H, Demiralp Γ, Durst CR, Dojat M, Doyle S, Festa J, Forbes F, Geremia E, Glocker B, Golland P, Guo X, Hamamci A, Iftekharuddin KM, Jena R, John NM, Konukoglu E, Lashkari D, Mariz JA, Meier R, Pereira S, Precup D, Price SJ, Raviv TR, Reza SM, Ryan M, Sarikaya D, Schwartz L, Shin HC, Shotton J, Silva CA, Sousa N, Subbanna NK, Szekely G, Taylor TJ, Thomas OM, Tustison NJ, Unal G, Vasseur F, Wintermark M, Ye DH, Zhao L, Zhao B, Zikic D, Prastawa M, Reyes M, Van Leemput K. "The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS)", IEEE Transactions on Medical Imaging 34(10), 1993-2024 (2015) DOI: 10.1109/TMI.2014.2377694
 
