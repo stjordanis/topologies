@@ -23,6 +23,7 @@ e.g.
 replacing `--data_path` and `--saved_model` with your local paths/files.
 
 There are many programs that will display Nifti 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
+The red overlay is the predictions from the model. The blue overlay is the ground truth masks. Any purple voxels are true positives.
 
  ![pred152](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/pred152.png)
 
