@@ -92,6 +92,4 @@ for batch_idx in tqdm(range(validation_generator.num_batches),
                          "{}_pred.nii.gz".format(fileIDs[idx])))
 
 print("\n\n\nModel predictions saved to directory: {}".format(save_directory))
-print("You can use a viewer like Mango (http://ric.uthscsa.edu/mango/) "
-      "to display the prediction Nifti files")
 print("Stopped script on {}".format(datetime.datetime.now()))
