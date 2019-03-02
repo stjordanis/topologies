@@ -45,7 +45,9 @@ with your local paths/files.
 
 4. The inference script will print the average [Dice coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) of the validation set. It will also save the predictions, MRI images, and ground truth masks for each validation sample into the `predictions_directory` sub-folder. 
 
-### There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
+### Displaying the Results
+
+There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3D files.  For the images below, we used the open-sourced package called [Mango](http://ric.uthscsa.edu/mango/).
 The red overlay is the predictions from the model. The blue overlay is the ground truth masks. Any purple voxels are true positives.
 
 ![pred195](https://github.com/NervanaSystems/topologies/blob/master/3D_UNet/keras_training_only_version/images/BRATS_195_img.gif "BRATS image #195:  Purple voxels indicate a perfect prediction by the model. Red are false positives. Blue are false negatives")
