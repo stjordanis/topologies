@@ -66,12 +66,12 @@ To convert the trained model to [Intel OpenVINO](https://software.intel.com/en-u
 source /opt/intel/computer_vision_sdk/bin/setupvars.sh
 ```
 
-2. Convert the Keras model to the TensorFlow serving protobuf format:
+2. Convert the Keras model to the TensorFlow Serving protobuf format:
 ```
 python convert_keras_to_tensorflow_serving_model.py
 ```
 
-3. Use TensorFlow to freeze the TensorFlow serving protobuf model:
+3. Use TensorFlow to freeze the TensorFlow Serving protobuf model:
 ```
 python ${CONDA_PREFIX}/lib/python3.6/site-packages/tensorflow/python/tools/freeze_graph.py --input_saved_model_dir saved_3dunet_model_protobuf --output_node_names PredictionMask/Sigmoid --output_graph frozen_model/saved_model_frozen.pb
 ```
