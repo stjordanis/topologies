@@ -29,7 +29,6 @@ python ${CONDA_PREFIX}/lib/python3.6/site-packages/tensorflow/python/tools/freez
 echo "Model frozen"
 
 # Convert to Intel OpenVINO intermediate representation
-python ${INTEL_CVSDK_DIR}/deployment_tools/model_optimizer/mo_tf.py --input_model frozen_model/saved_model_frozen.pb --input_shape=[1,144,144,144,1] --data_type FP32  --output_dir openvinomodels/FP32  --model_name 3d_unet_decathlon
+python ${INTEL_CVSDK_DIR}/deployment_tools/model_optimizer/mo_tf.py --input_model frozen_model/saved_model_frozen.pb --input_shape=[1,144,144,144,1] --data_type FP32  --output_dir openvino_models/FP32  --model_name 3d_unet_decathlon
 
-echo "OpenVINO model saved to openvinomodels/FP32 directory"
-
+echo "OpenVINO model saved to openvino_models/FP32 directory"
