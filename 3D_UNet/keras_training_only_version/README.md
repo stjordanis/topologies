@@ -48,8 +48,8 @@ where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the 
 e.g. 
 ```
 python evaluate_model.py --data_path ../../data/decathlon/Task01_BrainTumour/ --saved_model 3d_unet_decathlon_dice8621.hdf5
-``` replacing `--data_path` and `--saved_model` 
-with your local paths/files.
+``` 
+replacing `--data_path` and `--saved_model` with your local paths/files.
 
 4. The inference script will print the average [Dice coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) of the validation set. It will also save the predictions, MRI images, and ground truth masks for each validation sample into the `predictions_directory` sub-folder. 
 
