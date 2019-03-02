@@ -61,7 +61,10 @@ There are many programs that will display [Nifti](https://nifti.nimh.nih.gov/) 3
 
 To convert the trained model to [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit):
 
-1. Download and install [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit). Start the Intel OpenVINO environment: ```source /opt/intel/computer_vision_sdk/bin/setupvars.sh```
+1. Download and install [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit). Start the Intel OpenVINO environment: 
+```
+source /opt/intel/computer_vision_sdk/bin/setupvars.sh
+```
 
 2. Convert the Keras model to the TensorFlow serving protobuf format:
 ```
