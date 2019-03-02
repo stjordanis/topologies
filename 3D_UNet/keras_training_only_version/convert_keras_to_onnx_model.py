@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_filename",
                     help="Name of saved Keras model (e.g. model.h5)",
-                    default=os.path.join("saved_model", "3d_unet_brat2018_dice82.hdf5"))
+                    default=os.path.join("saved_model", "./saved_model/3d_unet_decathlon.hdf5"))
 parser.add_argument("--output_directory",
                     help="Directory where to save the ONNX Model",
                     default="saved_3dunet_model_onnx")
