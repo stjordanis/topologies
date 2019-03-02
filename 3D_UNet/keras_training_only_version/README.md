@@ -10,7 +10,10 @@ This model can achieve Dice coefficient of > 0.85 on the whole tumor using just 
 ### Steps to train a new model:
 
 1. Go to the [Medical Segmentation Decathlon](http://medicaldecathlon.com) website and download the [BraTS subset](https://drive.google.com/file/d/1A2IU8Sgea1h3fYLpYtFb2v7NYdMjvEhU/view?usp=sharing). The dataset has the Creative Commons Attribution-ShareAlike 4.0 International [license](https://creativecommons.org/licenses/by-sa/4.0/).
-2. Untar the "Task01_BrainTumour.tar" file:   ```tar -xvf Task01_BrainTumour.tar```
+2. Untar the "Task01_BrainTumour.tar" file:   
+```
+tar -xvf Task01_BrainTumour.tar
+```
 3. Create a Conda environment with TensorFlow. Command: 
 ```
 conda create -c anaconda -n decathlon pip python=3.6 tensorflow keras tqdm h5py psutil
@@ -29,7 +32,7 @@ python train.py --data_path $DECATHLON_ROOT_DIRECTORY
 ```
 where `$DECATHLON_ROOT_DIRECTORY` is the root directory where you un-tarred the Decathlon dataset.
 
-NOTE: The default settings take a H,W,D = [144,144,144] crop of the original image and mask and 8 images/masks per training batch. This requires several dozen gigabytes of memory to train the model. If you don't have enough memory or are getting out of memory (OOM) errors, you can pass `--patch_dim=64` to the `train.py` which will use a smaller ([64,64,64]) crop. You can also consider smaller batch sizes (e.g. `--bz=4` for a batch size of 4).
+NOTE: The default settings take a [Height, Width, Depth] = [144,144,144] crop of the original image and mask and 8 images/masks per training batch. This requires several dozen gigabytes of memory to train the model. If you don't have enough memory or are getting out of memory (OOM) errors, you can pass `--patch_dim=64` to the `train.py` which will use a smaller ([64,64,64]) crop. You can also consider smaller batch sizes (e.g. `--bz=4` for a batch size of 4).
 
 ### Steps to evaluate a pre-trained 3D U-Net model.
 
