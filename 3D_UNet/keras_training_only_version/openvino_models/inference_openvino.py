@@ -224,7 +224,7 @@ def main():
     batch_size, n_out_channels, height_out, width_out, depth_out = net.outputs[out_blob].shape
     net.batch_size = batch_size
 
-    print("Batch size = {}".format(batch_size))
+    log.info("Batch size = {}".format(batch_size))
 
     # Load data
     input_data, label_data, img_indicies = load_data(args)
@@ -249,11 +249,10 @@ def main():
                             height_out, width_out, depth_out))
 
     for idx in range(0, input_data.shape[0], batch_size):
-
         res = exec_net.infer(inputs={input_blob:
                                      input_data[idx:(idx+batch_size),
                                      :n_channels]})
-
+        
         # Save the predictions to array
         predictions[idx:(idx+batch_size),] = res[out_blob]
 
