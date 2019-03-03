@@ -45,7 +45,7 @@ def dice_score(pred, truth):
 
     return numerator / denominator
 
-def load_data():
+def load_data(args):
     """
     Modify this to load your data and labels
     """
@@ -69,14 +69,14 @@ def load_data():
     fileIDs = validation_generator.get_batch_fileIDs(batch_idx)
 
     """
-    OpenVINO uses channels first tensors (NCHW).
-    TensorFlow usually does channels last (NHWC).
+    OpenVINO uses channels first tensors (NCHWD).
+    TensorFlow usually does channels last (NHWDC).
     So we need to transpose the axes.
     """
-    imgs = imgs.transpose((0,3,1,2))
-    msks = msks.transpose((0,3,1,2))
+    imgs = imgs.transpose((0,4,1,2,3))
+    msks = msks.transpose((0,4,1,2,3))
 
-    return imgs, msks, fileIDS
+    return imgs, msks, fileIDs
 
 def load_model(fp16=False):
     """
@@ -101,6 +101,8 @@ def print_stats(exec_net, input_data, n_channels, batch_size, input_blob, out_bl
 
     # Start sync inference
     log.info("Starting inference ({} iterations)".format(args.number_iter))
+    log.info("Number of input channels = {}".format(n_channels))
+    log.info("Input data shape = {}".format(input_data.shape))
     infer_time = []
 
     for i in range(args.number_iter):
@@ -146,8 +148,27 @@ def build_argparser():
                         type=str)
     parser.add_argument("-stats", "--stats", help="Plot the runtime statistics",
                         default=False, action="store_true")
-    return parser
+    parser.add_argument("--patch_dim",
+                        type=int,
+                        default=144,
+                        help="Size of the 3D patch")
+    parser.add_argument("--train_test_split",
+                        type=float,
+                        default=0.85,
+                        help="Train test split (0-1)")
+    parser.add_argument("--number_input_channels",
+                        type=int,
+                        default=1,
+                        help="Number of input channels")
+    datapath = "../../../data/decathlon/Task01_BrainTumour/"
+    parser.add_argument("--data_path",
+                        default=datapath,
+                        help="Root directory for Medical Decathlon dataset")
+    parser.add_argument("--random_seed",
+                        default=816,
+                        help="Random seed")
 
+    return parser
 
 def main():
 
@@ -203,8 +224,10 @@ def main():
     batch_size, n_out_channels, height_out, width_out, depth_out = net.outputs[out_blob].shape
     net.batch_size = batch_size
 
+    print("Batch size = {}".format(batch_size))
+
     # Load data
-    input_data, label_data, img_indicies = load_data()
+    input_data, label_data, img_indicies = load_data(args)
 
     # Loading model to the plugin
     exec_net = plugin.load(network=net)
@@ -222,10 +245,10 @@ def main():
     Essentially, this looks exactly like a feed_dict for TensorFlow inference
     """
     # Go through the sample validation dataset to plot predictions
-    predictions = np.zeros((img_indicies.shape[0], n_out_channels,
+    predictions = np.zeros((input_data.shape[0], n_out_channels,
                             height_out, width_out, depth_out))
 
-    for idx in range(0, img_indicies.shape[0], batch_size):
+    for idx in range(0, input_data.shape[0], batch_size):
 
         res = exec_net.infer(inputs={input_blob:
                                      input_data[idx:(idx+batch_size),
