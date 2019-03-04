@@ -249,10 +249,11 @@ def main():
                             height_out, width_out, depth_out))
 
     for idx in range(0, input_data.shape[0], batch_size):
+        log.info("{} started".format(idx))
         res = exec_net.infer(inputs={input_blob:
                                      input_data[idx:(idx+batch_size),
                                      :n_channels]})
-        
+        log.info("{} finished".format(idx))
         # Save the predictions to array
         predictions[idx:(idx+batch_size),] = res[out_blob]
 

@@ -89,7 +89,7 @@ reduce_lr = K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
 
 callbacks = [checkpoint, tb_logs, reduce_lr]
 
-training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+training_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
                         "batch_size": args.bz,
                         "n_in_channels": args.number_input_channels,
                         "n_out_channels": 1,
@@ -101,7 +101,7 @@ training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
 training_generator = DataGenerator(True, args.data_path,
                                    **training_data_params)
 
-validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+validation_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
                           "batch_size": 1,
                           "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,

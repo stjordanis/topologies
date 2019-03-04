@@ -150,7 +150,7 @@ callbacks = [
 #msks_test = np.load(os.path.join(sys.path[0],"msks_test_3d.npy"))
 
 seed = hvd.rank()  # Make sure each worker gets different random seed
-training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+training_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
                         "batch_size": args.bz,
                         "n_in_channels": args.number_input_channels,
                         "n_out_channels": 1,
@@ -162,7 +162,7 @@ training_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
 training_generator = DataGenerator(True, args.data_path,
                                    **training_data_params)
 
-validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+validation_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
                           "batch_size": 1,
                           "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,

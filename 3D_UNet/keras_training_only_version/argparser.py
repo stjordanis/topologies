@@ -28,10 +28,18 @@ parser.add_argument("--bz",
                     type=int,
                     default=8,
                     help="Batch size")
-parser.add_argument("--patch_dim",
+parser.add_argument("--patch_height",
                     type=int,
                     default=144,
-                    help="Size of the 3D patch")
+                    help="Size of the 3D patch height")
+parser.add_argument("--patch_width",
+                    type=int,
+                    default=144,
+                    help="Size of the 3D patch width")
+parser.add_argument("--patch_depth",
+                    type=int,
+                    default=144,
+                    help="Size of the 3D patch depth")
 parser.add_argument("--lr",
                     type=float,
                     default=0.01,

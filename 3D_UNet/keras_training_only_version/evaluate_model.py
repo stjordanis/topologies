@@ -37,22 +37,22 @@ model = K.models.load_model(args.saved_model,
 
 print("Loading images and masks from test set")
 
-validation_data_params = {"dim": (args.patch_dim, args.patch_dim, args.patch_dim),
+validation_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
                           "batch_size": 1,
                           "n_in_channels": args.number_input_channels,
                           "n_out_channels": 1,
                           "train_test_split": args.train_test_split,
                           "augment": False,
-                          "shuffle": False,
-                          "seed": args.random_seed}
+                          "shuffle": False,"seed": args.random_seed}
 validation_generator = DataGenerator(False, args.data_path,
                                      **validation_data_params)
 
 m = model.evaluate_generator(validation_generator, verbose=1,
-                             max_queue_size=10, workers=2,
-                             use_multiprocessing=True)
+                             max_queue_size=args.num_prefetched_batches,
+                             workers=args.num_data_loaders,
+                             use_multiprocessing=False)
 
-print("Test metrics")
+print("\n\nTest metrics")
 print("============")
 i = 0
 for name in model.metrics_names:
