@@ -21,11 +21,11 @@ conda create -c anaconda -n decathlon pip python=3.6 tensorflow=1.11 keras tqdm 
 
 This will create a new conda virtual environment called "decathlon" and install [TensorFlow with Intel MKL-DNN](https://software.intel.com/en-us/articles/intel-optimization-for-tensorflow-installation-guide) for CPU training and inference.
 
-4. Enable the new environment. Command: 
+4. Enable the new environment. Run the command: 
 ```
 conda activate decathlon
 ```
-5. Install the package [nibabel](http://nipy.org/nibabel/). Command: 
+5. Install the package [nibabel](http://nipy.org/nibabel/). Run the command: 
 ```
 pip install nibabel
 ```
