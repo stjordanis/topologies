@@ -43,7 +43,7 @@ NOTE: The default settings take a [Height, Width, Depth] = [144, 144, 144] crop 
 
 2. Untar the Task01_BrainTumour.tar to a folder.
 
-3. Run the inference script:
+3. Start the model training. Run the inference script:
 ```
 python evaluate_model.py --data_path $DECATHLON_ROOT_DIRECTORY --saved_model $SAVED_HDF5_FILE
 ```
