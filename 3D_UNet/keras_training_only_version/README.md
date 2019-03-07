@@ -16,7 +16,7 @@ tar -xvf Task01_BrainTumour.tar
 ```
 3. Create a Conda environment with TensorFlow. Command: 
 ```
-conda create -c anaconda -n decathlon pip python=3.6 tensorflow keras tqdm h5py psutil
+conda create -c anaconda -n decathlon pip python=3.6 tensorflow=1.11 keras tqdm h5py psutil
 ```
 4. Enable the new environment. Command: 
 ```
