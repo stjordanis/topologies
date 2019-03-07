@@ -70,6 +70,15 @@ class DataGenerator(K.utils.Sequence):
 
         self.num_batches = self.__len__()
 
+        # Determine if axes are equal and can be rotated
+        # If the axes aren't equal then we can't rotate them.
+        equal_dim_axis = []
+        for idx in range(0, len(dim)):
+            for jdx in range(idx+1, len(dim)):
+                if dim[idx] == dim[jdx]:
+                    equal_dim_axis.append([idx, jdx]) # Valid rotation axes
+        self.dim_to_rotate = equal_dim_axis
+
     def get_length(self):
         return len(self.list_IDs)
 
@@ -207,10 +216,13 @@ class DataGenerator(K.utils.Sequence):
             # Number of pixels to offset crop in this dimension
             offset = int(np.floor(start*ratio_crop))
 
-            if randomize:
-                start += np.random.choice(range(-offset, offset))
-                if ((start + cropLen) > imgLen):  # Don't fall off the image
-                    start = (imgLen-cropLen)//2
+            if offset > 0:
+                if randomize:
+                    start += np.random.choice(range(-offset, offset))
+                    if ((start + cropLen) > imgLen):  # Don't fall off the image
+                        start = (imgLen-cropLen)//2
+            else:
+                start = 0
 
             slices.append(slice(start, start+cropLen))
 
@@ -230,11 +242,20 @@ class DataGenerator(K.utils.Sequence):
             img = np.flip(img, ax)
             msk = np.flip(msk, ax)
 
-        elif np.random.rand() > 0.5:
+        elif (len(self.dim_to_rotate) > 0) and (np.random.rand() > 0.5):
             rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
-            axis = np.random.choice([0, 1]) # Axis to rotate through
-            img = np.rot90(img, rot, axes=(axis,2))
-            msk = np.rot90(msk, rot, axes=(axis,2))
+
+            # This will choose the axes to rotate
+            # Axes must be equal in size
+            random_axis = self.dim_to_rotate[np.random.choice(len(self.dim_to_rotate))]
+            img = np.rot90(img, rot, axes=random_axis) # Rotate axes 0 and 1
+            msk = np.rot90(msk, rot, axes=random_axis) # Rotate axes 0 and 1
+
+        # elif np.random.rand() > 0.5:
+        #     rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
+        #     axis = np.random.choice([0, 1]) # Axis to rotate through
+        #     img = np.rot90(img, rot, axes=(axis,2))
+        #     msk = np.rot90(msk, rot, axes=(axis,2))
 
         return img, msk
 
