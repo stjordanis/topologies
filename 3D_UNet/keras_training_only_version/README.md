@@ -104,7 +104,7 @@ REFERENCES:
 Please see our [optimization notice](https://software.intel.com/en-us/articles/optimization-notice#opt-en).
 
 ### Architecture
-|    |   |
+|  lscpu  |   |
 | -- | -- | 
 | Architecture:   |       x86_64 |
 | CPU op-mode(s):  |      32-bit, 64-bit |
