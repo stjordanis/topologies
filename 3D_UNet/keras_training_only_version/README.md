@@ -14,7 +14,7 @@ This model can achieve Dice coefficient of > 0.85 on the whole tumor using just 
 ```
 tar -xvf Task01_BrainTumour.tar
 ```
-3. We used [conda virtual environments](https://www.anaconda.com/distribution/#download-section) for our Python scripts. Once you download and install conda, create a new conda environment with TensorFlow. Run the command: 
+3. We use [conda virtual environments](https://www.anaconda.com/distribution/#download-section) to run Python scripts. Once you download and install conda, create a new conda environment with TensorFlow. Run the command: 
 ```
 conda create -c anaconda -n decathlon pip python=3.6 tensorflow=1.11 keras tqdm h5py psutil
 ```
