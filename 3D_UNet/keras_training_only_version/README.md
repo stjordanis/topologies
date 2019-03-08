@@ -104,7 +104,6 @@ REFERENCES:
 Please see our [optimization notice](https://software.intel.com/en-us/articles/optimization-notice#opt-en).
 
 ### Architecture
-| | |
 | -- | -- |
 | Architecture:   |       x86_64 |
 | CPU op-mode(s):  |      32-bit, 64-bit |
@@ -132,4 +131,4 @@ Please see our [optimization notice](https://software.intel.com/en-us/articles/o
 | NUMA node0 CPU(s):    | 0-27 |
 | NUMA node1 CPU(s):    | 28-55 |
 | Flags:                | fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 intel_ppin intel_pt mba tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local ibpb ibrs dtherm arat pln pts hwp hwp_act_window hwp_epp hwp_pkg_req pku ospke
-|
+
